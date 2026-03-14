@@ -1,0 +1,27 @@
+[env]
+LIBS = "-lkernel32 -ladvapi32"
+NAME = "get_dpapi_system"
+OUT_DIR = "out"
+
+[tasks.create-out]
+description = "Create output directory"
+script_runner = "@duckscript"
+script = "mkdir ${OUT_DIR}"
+
+[tasks.build-x64]
+description = "Build x64"
+command = "cargo"
+args = ["build", "--release", "--target", "x86_64-pc-windows-gnu"]
+
+[tasks.link-x64]
+description = "Link x64"
+script_runner = "@shell"
+script = "boflink --mingw64 ${LIBS} --gc-sections --entry=go target/x86_64-pc-windows-gnu/release/lib${NAME}.a -o ${OUT_DIR}/${NAME}.x64.o"
+dependencies = ["build-x64", "create-out"]
+
+[tasks.build-all]
+description = "Build and link x64"
+dependencies = ["link-x64"]
+
+[tasks.default]
+alias = "build-all"

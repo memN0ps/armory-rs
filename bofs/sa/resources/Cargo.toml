@@ -1,0 +1,26 @@
+[package]
+name = "resources"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["staticlib"]
+
+[dependencies.rustbof]
+path = "../../../rustbof/crates/rustbof"
+
+[dependencies.windows-sys]
+version = "0.59"
+features = [
+    "Win32_Foundation",
+    "Win32_System_SystemInformation",
+    "Win32_Storage_FileSystem",
+]
+
+[profile.release]
+opt-level = "z"
+codegen-units = 1
+panic = "abort"
+strip = true
+lto = true
