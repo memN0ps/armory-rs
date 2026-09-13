@@ -1,5 +1,6 @@
 # Rust build artifacts
 debug/
+out/
 target/
 **/*.rs.bk
 *.pdb

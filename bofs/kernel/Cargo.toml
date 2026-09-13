@@ -1,0 +1,19 @@
+[package]
+name = "kernel"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["staticlib"]
+
+[features]
+default = []
+external-adapter = []
+
+[profile.release]
+opt-level = "z"
+codegen-units = 1
+panic = "abort"
+strip = true
+lto = true
