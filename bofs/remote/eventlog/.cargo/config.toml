@@ -1,0 +1,6 @@
+[build]
+target = "x86_64-pc-windows-gnu"
+
+[unstable]
+build-std = ["core", "alloc", "panic_abort"]
+build-std-features = ["compiler-builtins-mem"]

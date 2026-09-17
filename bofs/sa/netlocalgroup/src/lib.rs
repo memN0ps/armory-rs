@@ -1,12 +1,16 @@
-//! Net Local Group Enumeration BOF
+//! # Local Group Enumeration BOF
 //!
 //! Enumerates local groups on a system and optionally lists members of a
 //! specific local group using the NetLocalGroupEnum and NetLocalGroupGetMembers
 //! Windows API functions.
 //!
-//! ## MITRE ATT&CK
+//! ## Arguments
+//! - `short`: `0` to list groups or `1` to list members.
+//! - `str`: Optional remote computer name; use an empty string for local.
+//! - `str`: Group name when listing members.
 //!
-//! T1069.001 - Permission Groups Discovery: Local Groups
+//! ## MITRE ATT&CK
+//! - T1069.001 - Permission Groups Discovery: Local Groups
 
 #![no_std]
 
@@ -33,15 +37,17 @@ struct LocalGroupMembersInfo1 {
 }
 
 unsafe fn wide_ptr_to_string(ptr: *const u16) -> alloc::string::String {
-    if ptr.is_null() {
-        return alloc::string::String::new();
+    unsafe {
+        if ptr.is_null() {
+            return alloc::string::String::new();
+        }
+        let mut len = 0;
+        while *ptr.add(len) != 0 {
+            len += 1;
+        }
+        let slice = core::slice::from_raw_parts(ptr, len);
+        rustbof::str::from_wide(slice)
     }
-    let mut len = 0;
-    while *ptr.add(len) != 0 {
-        len += 1;
-    }
-    let slice = core::slice::from_raw_parts(ptr, len);
-    rustbof::str::from_wide(slice)
 }
 
 fn to_wide(s: &str) -> Vec<u16> {
@@ -74,7 +80,10 @@ fn main(args: *mut u8, len: usize) {
             list_members(server_ptr, group_wide.as_ptr());
         }
         _ => {
-            eprintln!("Error: invalid type {}. Use 0 for groups, 1 for members.", group_type);
+            eprintln!(
+                "Error: invalid type {}. Use 0 for groups, 1 for members.",
+                group_type
+            );
         }
     }
 }

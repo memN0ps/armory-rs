@@ -16,10 +16,10 @@
 use alloc::ffi::CString;
 use rustbof::data::DataParser;
 use rustbof::{eprintln, println};
-use windows_sys::Win32::Foundation::{GetLastError, FALSE};
+use windows_sys::Win32::Foundation::{FALSE, GetLastError};
 use windows_sys::Win32::System::Services::{
-    CloseServiceHandle, OpenSCManagerA, OpenServiceA, StartServiceA,
-    SC_MANAGER_CONNECT, SERVICE_START,
+    CloseServiceHandle, OpenSCManagerA, OpenServiceA, SC_MANAGER_CONNECT, SERVICE_START,
+    StartServiceA,
 };
 
 fn start_service(hostname: *const u8, service_name: &CString) -> u32 {

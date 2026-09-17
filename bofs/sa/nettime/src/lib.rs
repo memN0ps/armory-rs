@@ -35,7 +35,11 @@ fn main(args: *mut u8, len: usize) {
         let mut tod: *mut u8 = core::ptr::null_mut();
         let status = NetRemoteTOD(server_ptr, &mut tod);
 
-        let display_host = if hostname_str.is_empty() { "localhost" } else { hostname_str };
+        let display_host = if hostname_str.is_empty() {
+            "localhost"
+        } else {
+            hostname_str
+        };
 
         if status == 0 {
             let info = &*(tod as *const TIME_OF_DAY_INFO);

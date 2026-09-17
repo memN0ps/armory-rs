@@ -40,7 +40,9 @@ fn main(args: *mut u8, len: usize) {
     }
 
     let mut path = alloc::vec::Vec::new();
-    path.extend_from_slice(b"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Schedule\\TaskCache\\Tree\\");
+    path.extend_from_slice(
+        b"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Schedule\\TaskCache\\Tree\\",
+    );
     path.extend_from_slice(taskname.as_bytes());
     path.push(0);
 
@@ -62,7 +64,11 @@ fn main(args: *mut u8, len: usize) {
             &mut disposition,
         );
         if ret != 0 {
-            eprintln!("RegCreateKeyExA failed: 0x{:X} (error {})", ret, GetLastError());
+            eprintln!(
+                "RegCreateKeyExA failed: 0x{:X} (error {})",
+                ret,
+                GetLastError()
+            );
             eprintln!("Note: Requires elevated privileges (Administrator)");
             return;
         }
@@ -107,7 +113,10 @@ fn main(args: *mut u8, len: usize) {
         }
         println!("  Task:    {}", taskname);
         println!("  Command: {}", command);
-        println!("  Path:    HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Schedule\\TaskCache\\Tree\\{}", taskname);
+        println!(
+            "  Path:    HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Schedule\\TaskCache\\Tree\\{}",
+            taskname
+        );
         println!("\nNote: This creates registry markers only. Full task execution requires");
         println!("additional TaskCache entries (Actions, Triggers, etc.).");
     }

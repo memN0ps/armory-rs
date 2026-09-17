@@ -1,4 +1,5 @@
 [env]
+CARGO_TARGET_DIR = "target"
 LIBS = "-lkernel32 -lwldap32 -lnetapi32"
 NAME = "nonpagedldapsearch"
 OUT_DIR = "out"

@@ -1,4 +1,5 @@
 [env]
+CARGO_TARGET_DIR = "target"
 LIBS = "-lkernel32 -liphlpapi"
 NAME = "arp"
 OUT_DIR = "out"

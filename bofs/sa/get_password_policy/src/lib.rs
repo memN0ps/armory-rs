@@ -35,11 +35,7 @@ struct UserModalsInfo3 {
 }
 
 unsafe extern "system" {
-    fn NetUserModalsGet(
-        servername: *const u16,
-        level: u32,
-        bufptr: *mut *mut u8,
-    ) -> u32;
+    fn NetUserModalsGet(servername: *const u16, level: u32, bufptr: *mut *mut u8) -> u32;
 }
 
 const NERR_SUCCESS: u32 = 0;
@@ -74,16 +70,17 @@ fn main(args: *mut u8, len: usize) {
         } else if !buf.is_null() {
             let info = &*(buf as *const UserModalsInfo0);
 
-            println!("  Minimum password length:  {}", info.usrmod0_min_passwd_len);
+            println!(
+                "  Minimum password length:  {}",
+                info.usrmod0_min_passwd_len
+            );
 
-            let max_age_days = if info.usrmod0_max_passwd_age == 0xFFFFFFFF {
+            if info.usrmod0_max_passwd_age == 0xFFFFFFFF {
                 println!("  Maximum password age:     Never expires");
-                0
             } else {
                 let days = info.usrmod0_max_passwd_age / 86400;
                 println!("  Maximum password age:     {} days", days);
-                days
-            };
+            }
 
             let min_age_days = info.usrmod0_min_passwd_age / 86400;
             println!("  Minimum password age:     {} days", min_age_days);
@@ -95,7 +92,10 @@ fn main(args: *mut u8, len: usize) {
                 println!("  Force logoff:             {} minutes", logoff_minutes);
             }
 
-            println!("  Password history length:  {}", info.usrmod0_password_hist_len);
+            println!(
+                "  Password history length:  {}",
+                info.usrmod0_password_hist_len
+            );
 
             NetApiBufferFree(buf as *const c_void);
         }
@@ -104,11 +104,17 @@ fn main(args: *mut u8, len: usize) {
         let status3 = NetUserModalsGet(server_ptr, 3, &mut buf3);
 
         if status3 != NERR_SUCCESS {
-            eprintln!("\nNetUserModalsGet (level 3) failed with error: {}", status3);
+            eprintln!(
+                "\nNetUserModalsGet (level 3) failed with error: {}",
+                status3
+            );
         } else if !buf3.is_null() {
             let info3 = &*(buf3 as *const UserModalsInfo3);
 
-            println!("\n  Lockout threshold:        {}", info3.usrmod3_lockout_threshold);
+            println!(
+                "\n  Lockout threshold:        {}",
+                info3.usrmod3_lockout_threshold
+            );
 
             let duration_minutes = info3.usrmod3_lockout_duration / 60;
             let window_minutes = info3.usrmod3_lockout_observation_window / 60;

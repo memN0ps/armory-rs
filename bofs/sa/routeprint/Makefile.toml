@@ -1,4 +1,5 @@
 [env]
+CARGO_TARGET_DIR = "target"
 LIBS = "-lkernel32 -liphlpapi -lws2_32"
 NAME = "routeprint"
 OUT_DIR = "out"

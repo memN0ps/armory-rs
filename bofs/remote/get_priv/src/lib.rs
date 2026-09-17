@@ -13,13 +13,15 @@
 #![no_std]
 
 use rustbof::data::DataParser;
-use rustbof::{eprintln, println};
-use windows_sys::Win32::Foundation::{CloseHandle, GetLastError, LUID, FALSE, ERROR_SUCCESS};
+use rustbof::println;
+use windows_sys::Win32::Foundation::{CloseHandle, ERROR_SUCCESS, FALSE, GetLastError, LUID};
 use windows_sys::Win32::Security::{
-    AdjustTokenPrivileges, LookupPrivilegeValueA, SE_PRIVILEGE_ENABLED,
-    TOKEN_ADJUST_PRIVILEGES, TOKEN_PRIVILEGES,
+    AdjustTokenPrivileges, LookupPrivilegeValueA, SE_PRIVILEGE_ENABLED, TOKEN_ADJUST_PRIVILEGES,
+    TOKEN_PRIVILEGES,
 };
-use windows_sys::Win32::System::Threading::{GetCurrentProcess, GetCurrentThread, OpenProcessToken};
+use windows_sys::Win32::System::Threading::{
+    GetCurrentProcess, GetCurrentThread, OpenProcessToken,
+};
 
 unsafe extern "system" {
     fn OpenThreadToken(
@@ -34,18 +36,29 @@ fn set_privilege(priv_name: &str, use_thread: bool) -> u32 {
     unsafe {
         let mut token: *mut core::ffi::c_void = core::ptr::null_mut();
         if use_thread {
-            if OpenThreadToken(GetCurrentThread(), TOKEN_ADJUST_PRIVILEGES, FALSE, &mut token) == FALSE {
+            if OpenThreadToken(
+                GetCurrentThread(),
+                TOKEN_ADJUST_PRIVILEGES,
+                FALSE,
+                &mut token,
+            ) == FALSE
+            {
                 return GetLastError();
             }
-        } else {
-            if OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES, &mut token) == FALSE {
-                return GetLastError();
-            }
+        } else if OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES, &mut token)
+            == FALSE
+        {
+            return GetLastError();
         }
 
         let mut luid: LUID = core::mem::zeroed();
         let name_cstr = rustbof::str::to_cstr(priv_name);
-        if LookupPrivilegeValueA(core::ptr::null(), name_cstr.as_ptr() as *const u8, &mut luid) == FALSE {
+        if LookupPrivilegeValueA(
+            core::ptr::null(),
+            name_cstr.as_ptr() as *const u8,
+            &mut luid,
+        ) == FALSE
+        {
             let err = GetLastError();
             CloseHandle(token);
             return err;
@@ -57,9 +70,12 @@ fn set_privilege(priv_name: &str, use_thread: bool) -> u32 {
         tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
 
         if AdjustTokenPrivileges(
-            token, FALSE, &tp,
+            token,
+            FALSE,
+            &tp,
             core::mem::size_of::<TOKEN_PRIVILEGES>() as u32,
-            core::ptr::null_mut(), core::ptr::null_mut(),
+            core::ptr::null_mut(),
+            core::ptr::null_mut(),
         ) == FALSE
         {
             let err = GetLastError();

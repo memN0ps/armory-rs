@@ -25,8 +25,8 @@ use windows_sys::Win32::Security::SECURITY_ATTRIBUTES;
 use windows_sys::Win32::Storage::FileSystem::ReadFile;
 use windows_sys::Win32::System::Pipes::CreatePipe;
 use windows_sys::Win32::System::Threading::{
-    CreateProcessA, WaitForSingleObject, PROCESS_INFORMATION, STARTUPINFOA, CREATE_NO_WINDOW,
-    STARTF_USESTDHANDLES,
+    CREATE_NO_WINDOW, CreateProcessA, PROCESS_INFORMATION, STARTF_USESTDHANDLES, STARTUPINFOA,
+    WaitForSingleObject,
 };
 
 fn run_command(cmd: &str) {
@@ -72,7 +72,13 @@ fn run_command(cmd: &str) {
             let mut buf = [0u8; 4096];
             loop {
                 let mut read: u32 = 0;
-                if ReadFile(h_read, buf.as_mut_ptr(), 4096, &mut read, core::ptr::null_mut()) == 0
+                if ReadFile(
+                    h_read,
+                    buf.as_mut_ptr(),
+                    4096,
+                    &mut read,
+                    core::ptr::null_mut(),
+                ) == 0
                     || read == 0
                 {
                     break;
@@ -100,8 +106,22 @@ fn main(args: *mut u8, len: usize) {
 
     println!("=== ADCS Certificate Template Enumeration (T1649) ===");
     println!();
-    println!("  CA Config: {}", if ca_config.is_empty() { "(default)" } else { &ca_config });
-    println!("  Template:  {}", if template.is_empty() { "(all)" } else { &template });
+    println!(
+        "  CA Config: {}",
+        if ca_config.is_empty() {
+            "(default)"
+        } else {
+            &ca_config
+        }
+    );
+    println!(
+        "  Template:  {}",
+        if template.is_empty() {
+            "(all)"
+        } else {
+            &template
+        }
+    );
     println!();
 
     let cmd = if !template.is_empty() {
@@ -116,7 +136,7 @@ fn main(args: *mut u8, len: usize) {
     } else if !ca_config.is_empty() {
         format!("certutil -config \"{}\" -template", ca_config)
     } else {
-        format!("certutil -template")
+        String::from("certutil -template")
     };
 
     run_command(&cmd);

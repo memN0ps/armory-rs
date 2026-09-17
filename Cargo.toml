@@ -1,0 +1,11 @@
+[workspace]
+resolver = "2"
+members = ["bofs/*/*"]
+exclude = ["bofs/kernel", "rustbof", "xtask"]
+
+[profile.release]
+opt-level = "z"
+codegen-units = 1
+panic = "abort"
+strip = true
+lto = true

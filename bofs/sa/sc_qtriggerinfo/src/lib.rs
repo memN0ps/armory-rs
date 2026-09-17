@@ -23,18 +23,18 @@ const SERVICE_CONFIG_TRIGGER_INFO: u32 = 8;
 
 #[repr(C)]
 struct ServiceTriggerInfo {
-    cTriggers: u32,
-    pTriggers: *const ServiceTrigger,
-    pReserved: *const u8,
+    c_triggers: u32,
+    p_triggers: *const ServiceTrigger,
+    p_reserved: *const u8,
 }
 
 #[repr(C)]
 struct ServiceTrigger {
-    dwTriggerType: u32,
-    dwAction: u32,
-    pTriggerSubtype: *const u8, // GUID pointer
-    cDataItems: u32,
-    pDataItems: *const u8,
+    dw_trigger_type: u32,
+    dw_action: u32,
+    p_trigger_subtype: *const u8, // GUID pointer
+    c_data_items: u32,
+    p_data_items: *const u8,
 }
 
 fn trigger_type_str(t: u32) -> &'static str {
@@ -137,22 +137,22 @@ fn main(args: *mut u8, len: usize) {
         let trigger_info = &*(buf.as_ptr() as *const ServiceTriggerInfo);
 
         println!("SERVICE_NAME: {}", service_name);
-        println!("\t{:<20} : {}", "NUM_TRIGGERS", trigger_info.cTriggers);
+        println!("\t{:<20} : {}", "NUM_TRIGGERS", trigger_info.c_triggers);
 
-        if !trigger_info.pTriggers.is_null() && trigger_info.cTriggers > 0 {
+        if !trigger_info.p_triggers.is_null() && trigger_info.c_triggers > 0 {
             let triggers = core::slice::from_raw_parts(
-                trigger_info.pTriggers,
-                trigger_info.cTriggers as usize,
+                trigger_info.p_triggers,
+                trigger_info.c_triggers as usize,
             );
             for (i, trigger) in triggers.iter().enumerate() {
                 println!(
                     "\tTRIGGER[{}]            : Type={} ({}), Action={} ({}), DataItems={}",
                     i,
-                    trigger.dwTriggerType,
-                    trigger_type_str(trigger.dwTriggerType),
-                    trigger.dwAction,
-                    trigger_action_str(trigger.dwAction),
-                    trigger.cDataItems
+                    trigger.dw_trigger_type,
+                    trigger_type_str(trigger.dw_trigger_type),
+                    trigger.dw_action,
+                    trigger_action_str(trigger.dw_action),
+                    trigger.c_data_items
                 );
             }
         }

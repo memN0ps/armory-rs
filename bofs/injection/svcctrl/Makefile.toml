@@ -1,4 +1,5 @@
 [env]
+CARGO_TARGET_DIR = "target"
 LIBS = "-lkernel32 -lntdll"
 NAME = "svcctrl"
 OUT_DIR = "out"

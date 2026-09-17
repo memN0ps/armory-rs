@@ -5,24 +5,21 @@ use core::ffi::c_void;
 use core::ptr::{null, null_mut};
 
 use rustbof::str::{from_wide, to_wide};
-use windows_sys::Win32::System::Threading::OpenProcessToken;
-use windows_sys::Win32::Security::Authorization::ConvertSidToStringSidW;
-use windows_sys::Win32::Security::Authentication::Identity::{
-    GetUserNameExA, NameSamCompatible
-};
 use windows_sys::Win32::Foundation::{
-    CloseHandle, ERROR_INSUFFICIENT_BUFFER, FALSE, GetLastError, 
-    LUID, LocalFree
+    CloseHandle, ERROR_INSUFFICIENT_BUFFER, FALSE, GetLastError, LUID, LocalFree,
 };
+use windows_sys::Win32::Security::Authentication::Identity::{GetUserNameExA, NameSamCompatible};
+use windows_sys::Win32::Security::Authorization::ConvertSidToStringSidW;
 use windows_sys::Win32::Security::{
-    GetTokenInformation, LookupPrivilegeDisplayNameW, LookupPrivilegeNameW,
-    SidTypeAlias, SidTypeGroup, SidTypeLabel, SidTypeWellKnownGroup,
-    TokenUser, TOKEN_INFORMATION_CLASS, TOKEN_READ, TOKEN_USER,
+    GetTokenInformation, LookupPrivilegeDisplayNameW, LookupPrivilegeNameW, SidTypeAlias,
+    SidTypeGroup, SidTypeLabel, SidTypeWellKnownGroup, TOKEN_INFORMATION_CLASS, TOKEN_READ,
+    TOKEN_USER, TokenUser,
 };
 use windows_sys::Win32::System::SystemServices::{
-    SE_GROUP_ENABLED, SE_GROUP_ENABLED_BY_DEFAULT, SE_GROUP_MANDATORY,
-    SE_GROUP_OWNER, SE_GROUP_USE_FOR_DENY_ONLY,
+    SE_GROUP_ENABLED, SE_GROUP_ENABLED_BY_DEFAULT, SE_GROUP_MANDATORY, SE_GROUP_OWNER,
+    SE_GROUP_USE_FOR_DENY_ONLY,
 };
+use windows_sys::Win32::System::Threading::OpenProcessToken;
 
 pub fn get_username() -> String {
     let mut buf = vec![0u8; 256];
@@ -64,11 +61,7 @@ pub fn get_token_info(class: TOKEN_INFORMATION_CLASS) -> Option<Vec<u8>> {
         let result = GetTokenInformation(token, class, buf.as_mut_ptr() as _, len, &mut len);
         CloseHandle(token);
 
-        if result != FALSE { 
-            Some(buf) 
-        } else { 
-            None 
-        }
+        if result != FALSE { Some(buf) } else { None }
     }
 }
 
@@ -102,7 +95,13 @@ pub fn lookup_privilege_name(luid: &LUID) -> String {
         }
 
         let mut buf = vec![0u16; len as usize];
-        if LookupPrivilegeNameW(null(), luid as *const _ as *mut _, buf.as_mut_ptr(), &mut len) != FALSE {
+        if LookupPrivilegeNameW(
+            null(),
+            luid as *const _ as *mut _,
+            buf.as_mut_ptr(),
+            &mut len,
+        ) != FALSE
+        {
             from_wide(&buf)
         } else {
             String::new()
@@ -122,7 +121,9 @@ pub fn lookup_privilege_desc(name: &str) -> String {
         }
 
         let mut buf = vec![0u16; len as usize];
-        if LookupPrivilegeDisplayNameW(null(), name.as_ptr(), buf.as_mut_ptr(), &mut len, &mut lang) != FALSE {
+        if LookupPrivilegeDisplayNameW(null(), name.as_ptr(), buf.as_mut_ptr(), &mut len, &mut lang)
+            != FALSE
+        {
             from_wide(&buf)
         } else {
             String::new()
@@ -150,11 +151,11 @@ pub fn format_group_attrs(attrs: u32) -> String {
     if (attrs & SE_GROUP_MANDATORY as u32) != 0 {
         s.push_str("Mandatory group, ");
     }
-    
+
     if (attrs & SE_GROUP_ENABLED_BY_DEFAULT as u32) != 0 {
         s.push_str("Enabled by default, ");
     }
-    
+
     if (attrs & SE_GROUP_ENABLED as u32) != 0 {
         s.push_str("Enabled group");
     }
@@ -165,6 +166,6 @@ pub fn format_group_attrs(attrs: u32) -> String {
         }
         s.push_str("Group owner");
     }
-    
+
     s
 }

@@ -387,7 +387,7 @@ fn read_audit_image_name<A: KernelAdapter>(
         .map_err(|error| ProcessError::Adapter(error.code()))?;
     let mut output_index = 0;
 
-    for pair in wide_path[..read_bytes].as_chunks::<2>().0 {
+    for pair in wide_path[..read_bytes].chunks_exact(2) {
         let low = pair[0];
         let high = pair[1];
 

@@ -1,0 +1,18 @@
+[package]
+name = "domaininfo"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["staticlib"]
+
+[dependencies.rustbof]
+path = "../../../rustbof/crates/rustbof"
+
+[profile.release]
+opt-level = "z"
+codegen-units = 1
+panic = "abort"
+strip = true
+lto = true

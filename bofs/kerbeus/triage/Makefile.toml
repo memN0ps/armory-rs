@@ -1,4 +1,5 @@
 [env]
+CARGO_TARGET_DIR = "target"
 LIBS = "-lkernel32 -ladvapi32 -lsecur32"
 NAME = "triage"
 OUT_DIR = "out"

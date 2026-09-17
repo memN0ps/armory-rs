@@ -1,4 +1,5 @@
 [env]
+CARGO_TARGET_DIR = "target"
 LIBS = "-lkernel32 -ladvapi32"
 NAME = "get_dpapi_system"
 OUT_DIR = "out"

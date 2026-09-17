@@ -1,36 +1,80 @@
 //! # Task List BOF
 //!
-//! Enumerates running processes. Intended to use WMI Win32_Process for detailed
-//! process information including command lines and owner. Falls back to a stub
-//! pending COM IWbemLocator vtable FFI implementation.
+//! Enumerates local processes with process ID, parent process ID, session, and
+//! image name.
 //!
 //! ## MITRE ATT&CK
 //! - T1057 - Process Discovery
 //!
 //! ## Arguments
 //! None.
-//!
-//! ## Status
-//! Stub implementation. Full process enumeration via WMI Win32_Process requires
-//! COM vtable FFI definitions for IWbemLocator and IWbemServices interfaces.
 
 #![no_std]
 
-use rustbof::println;
+use alloc::string::String;
+use rustbof::{eprintln, println};
+use windows_sys::Win32::{
+    Foundation::{CloseHandle, GetLastError, INVALID_HANDLE_VALUE},
+    System::{
+        Diagnostics::ToolHelp::{
+            CreateToolhelp32Snapshot, PROCESSENTRY32W, Process32FirstW, Process32NextW,
+            TH32CS_SNAPPROCESS,
+        },
+        RemoteDesktop::ProcessIdToSessionId,
+    },
+};
+
+fn image_name(value: &[u16]) -> String {
+    let length = value
+        .iter()
+        .position(|&unit| unit == 0)
+        .unwrap_or(value.len());
+
+    String::from_utf16_lossy(&value[..length])
+}
+
+fn run() -> Result<u32, u32> {
+    let snapshot = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) };
+    if snapshot == INVALID_HANDLE_VALUE {
+        return Err(unsafe { GetLastError() });
+    }
+
+    let mut entry: PROCESSENTRY32W = unsafe { core::mem::zeroed() };
+    entry.dwSize = size_of::<PROCESSENTRY32W>() as u32;
+    let mut count = 0u32;
+    let mut current = unsafe { Process32FirstW(snapshot, &mut entry) };
+
+    while current != 0 && count < 4096 {
+        let mut session = 0u32;
+        let session = if unsafe { ProcessIdToSessionId(entry.th32ProcessID, &mut session) } != 0 {
+            session
+        } else {
+            u32::MAX
+        };
+
+        println!(
+            "{:<7} {:<7} {:<7} {}",
+            entry.th32ProcessID,
+            entry.th32ParentProcessID,
+            if session == u32::MAX { 0 } else { session },
+            image_name(&entry.szExeFile)
+        );
+        count += 1;
+        current = unsafe { Process32NextW(snapshot, &mut entry) };
+    }
+
+    unsafe { CloseHandle(snapshot) };
+
+    Ok(count)
+}
 
 #[rustbof::main]
 fn main() {
-    println!("BOF loaded: tasklist");
-    println!("Process enumeration via WMI Win32_Process - coming soon");
-    println!();
-    println!("  - WMI query: SELECT * FROM Win32_Process");
-    println!("  - Display: PID, Name, PPID, CommandLine, Owner, SessionId");
-    println!("  - Support remote host via WMI connection");
-    println!("  - CSV-formatted output for easy parsing");
-    println!();
-    println!("Requires COM IWbemLocator vtable FFI (shared with wmi_query BOF).");
-    println!("See wmi_query BOF for COM interface details.");
-    println!();
-    println!("Alternative: Use the existing 'listmods' BOF for module enumeration,");
-    println!("or 'ProcessListHandles' BOF for handle enumeration.");
+    println!("Process inventory\n");
+    println!("{:<7} {:<7} {:<7} {}", "PID", "PPID", "Session", "Image");
+    println!("{:-<7} {:-<7} {:-<7} {:-<32}", "", "", "", "");
+    match run() {
+        Ok(count) => println!("Processes: {}", count),
+        Err(error) => eprintln!("Process snapshot failed: {}", error),
+    }
 }

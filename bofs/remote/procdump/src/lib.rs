@@ -15,21 +15,16 @@
 
 use rustbof::data::DataParser;
 use rustbof::{eprintln, println};
-use windows_sys::Win32::Foundation::{
-    CloseHandle, GetLastError, LUID, ERROR_SUCCESS, FALSE,
-};
-use windows_sys::Win32::Security::{
-    AdjustTokenPrivileges, LookupPrivilegeValueA, SE_PRIVILEGE_ENABLED,
-    TOKEN_ADJUST_PRIVILEGES, TOKEN_PRIVILEGES,
-};
-use windows_sys::Win32::Storage::FileSystem::{
-    CreateFileA, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL,
-};
-use windows_sys::Win32::System::Threading::{
-    GetCurrentProcess, OpenProcess, PROCESS_QUERY_INFORMATION, PROCESS_VM_READ,
-    OpenProcessToken,
-};
 use windows_sys::Win32::Foundation::GENERIC_WRITE;
+use windows_sys::Win32::Foundation::{CloseHandle, ERROR_SUCCESS, FALSE, GetLastError, LUID};
+use windows_sys::Win32::Security::{
+    AdjustTokenPrivileges, LookupPrivilegeValueA, SE_PRIVILEGE_ENABLED, TOKEN_ADJUST_PRIVILEGES,
+    TOKEN_PRIVILEGES,
+};
+use windows_sys::Win32::Storage::FileSystem::{CREATE_ALWAYS, CreateFileA, FILE_ATTRIBUTE_NORMAL};
+use windows_sys::Win32::System::Threading::{
+    GetCurrentProcess, OpenProcess, OpenProcessToken, PROCESS_QUERY_INFORMATION, PROCESS_VM_READ,
+};
 
 const INVALID_HANDLE_VALUE: *mut core::ffi::c_void = -1isize as *mut core::ffi::c_void;
 const MINIDUMP_WITH_FULL_MEMORY: u32 = 2;
@@ -55,12 +50,7 @@ fn enable_debug_privilege() -> u32 {
 
         let mut luid: LUID = core::mem::zeroed();
         let priv_name = b"SeDebugPrivilege\0";
-        if LookupPrivilegeValueA(
-            core::ptr::null(),
-            priv_name.as_ptr(),
-            &mut luid,
-        ) == FALSE
-        {
+        if LookupPrivilegeValueA(core::ptr::null(), priv_name.as_ptr(), &mut luid) == FALSE {
             let err = GetLastError();
             CloseHandle(token);
             return err;
@@ -99,14 +89,15 @@ fn main(args: *mut u8, len: usize) {
 
     let status = enable_debug_privilege();
     if status != ERROR_SUCCESS {
-        eprintln!("Warning: Failed to enable SeDebugPrivilege (error {})", status);
+        eprintln!(
+            "Warning: Failed to enable SeDebugPrivilege (error {})",
+            status
+        );
     } else {
         println!("Enabled SeDebugPrivilege");
     }
 
-    let process = unsafe {
-        OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid)
-    };
+    let process = unsafe { OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid) };
     if process.is_null() {
         let err = unsafe { GetLastError() };
         eprintln!("Failed to open process {} (error {})", pid, err);

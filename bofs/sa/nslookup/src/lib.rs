@@ -81,7 +81,7 @@ fn main(args: *mut u8, len: usize) {
         let status = DnsQuery_A(
             domain_cstr.as_ptr() as *const u8,
             record_type,
-            options as u32,
+            options,
             srv_ptr,
             &mut records as *mut *mut DNS_RECORDA as *mut *mut _,
             core::ptr::null_mut(),
@@ -92,7 +92,11 @@ fn main(args: *mut u8, len: usize) {
             return;
         }
 
-        println!("DNS query results for '{}' (type {}):", domain, dns_type_name(record_type));
+        println!(
+            "DNS query results for '{}' (type {}):",
+            domain,
+            dns_type_name(record_type)
+        );
 
         let mut current = records;
         while !current.is_null() {

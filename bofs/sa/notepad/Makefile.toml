@@ -1,4 +1,5 @@
 [env]
+CARGO_TARGET_DIR = "target"
 LIBS = "-lkernel32 -luser32"
 NAME = "notepad"
 OUT_DIR = "out"

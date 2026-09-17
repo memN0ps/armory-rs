@@ -20,10 +20,10 @@
 use core::ptr::null_mut;
 use rustbof::data::DataParser;
 use rustbof::{eprintln, println};
-use windows_sys::Win32::Foundation::{CloseHandle, GetLastError, FALSE};
+use windows_sys::Win32::Foundation::{CloseHandle, FALSE, GetLastError};
 use windows_sys::Win32::System::Diagnostics::Debug::WriteProcessMemory;
 use windows_sys::Win32::System::Memory::{
-    VirtualAllocEx, VirtualProtectEx, MEM_COMMIT, MEM_RESERVE, PAGE_EXECUTE_READ, PAGE_READWRITE,
+    MEM_COMMIT, MEM_RESERVE, PAGE_EXECUTE_READ, PAGE_READWRITE, VirtualAllocEx, VirtualProtectEx,
 };
 use windows_sys::Win32::System::Threading::{CreateRemoteThread, OpenProcess, PROCESS_ALL_ACCESS};
 

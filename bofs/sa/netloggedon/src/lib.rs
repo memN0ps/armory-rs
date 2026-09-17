@@ -93,8 +93,10 @@ fn main(args: *mut u8, len: usize) {
             }
 
             if !buf.is_null() && entries_read > 0 {
-                let entries =
-                    core::slice::from_raw_parts(buf as *const WkstaUserInfo1, entries_read as usize);
+                let entries = core::slice::from_raw_parts(
+                    buf as *const WkstaUserInfo1,
+                    entries_read as usize,
+                );
 
                 for entry in entries {
                     let username = wide_ptr_to_str(entry.wkui1_username);

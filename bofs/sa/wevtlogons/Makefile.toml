@@ -1,0 +1,22 @@
+[env]
+CARGO_TARGET_DIR = "target"
+LIBS = "-lkernel32 -lwevtapi -lmsvcrt"
+NAME = "wevtlogons"
+OUT_DIR = "out"
+
+[tasks.create-out]
+script_runner = "@duckscript"
+script = "mkdir ${OUT_DIR}"
+
+[tasks.build-x64]
+command = "cargo"
+args = ["build", "--offline", "--locked", "--release", "--target", "x86_64-pc-windows-gnu"]
+
+[tasks.link-x64]
+script_runner = "@shell"
+script = "boflink --mingw64 ${LIBS} --gc-sections --entry=go target/x86_64-pc-windows-gnu/release/lib${NAME}.a -o ${OUT_DIR}/${NAME}.x64.o"
+dependencies = ["build-x64", "create-out"]
+
+[tasks.default]
+alias = "link-x64"
+

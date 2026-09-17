@@ -1,0 +1,27 @@
+[tasks.build-all]
+description = "Build and link every BOF"
+command = "cargo"
+args = ["run", "--manifest-path", "xtask/Cargo.toml", "--release", "--", "build-all"]
+
+[tasks.generate-assets]
+description = "Regenerate per-BOF README and YARA files"
+command = "cargo"
+args = ["run", "--manifest-path", "xtask/Cargo.toml", "--release", "--", "generate-assets"]
+
+[tasks.check-assets]
+description = "Check BOF layout, crate docs, MITRE mappings, generated assets, and tracked-file policy"
+command = "cargo"
+args = ["run", "--manifest-path", "xtask/Cargo.toml", "--release", "--", "check-assets"]
+
+[tasks.check-yara]
+description = "Compile every YARA rule and test positive and same-toolchain negative objects"
+command = "cargo"
+args = ["run", "--manifest-path", "xtask/Cargo.toml", "--release", "--", "check-yara"]
+
+[tasks.check-release]
+description = "Run repository and built-object release gates"
+command = "cargo"
+args = ["run", "--manifest-path", "xtask/Cargo.toml", "--release", "--", "check-release"]
+
+[tasks.default]
+alias = "build-all"

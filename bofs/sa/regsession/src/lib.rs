@@ -19,7 +19,6 @@ use alloc::vec;
 use core::ffi::CStr;
 use rustbof::data::DataParser;
 use rustbof::{eprintln, println};
-use windows_sys::Win32::Foundation::GetLastError;
 use windows_sys::Win32::System::Registry::*;
 
 const HKEY_USERS: *mut core::ffi::c_void = 0x80000003u32 as isize as *mut core::ffi::c_void;
@@ -35,7 +34,10 @@ fn main(args: *mut u8, len: usize) {
         hostname.as_str()
     };
 
-    println!("Enumerating logged-on user SIDs from HKEY_USERS on {}", target);
+    println!(
+        "Enumerating logged-on user SIDs from HKEY_USERS on {}",
+        target
+    );
     println!("{}", "=".repeat(60));
 
     unsafe {

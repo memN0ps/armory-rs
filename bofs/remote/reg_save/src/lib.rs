@@ -15,10 +15,10 @@
 
 use rustbof::data::DataParser;
 use rustbof::{eprintln, println};
-use windows_sys::Win32::Foundation::{CloseHandle, GetLastError, LUID, FALSE};
+use windows_sys::Win32::Foundation::{CloseHandle, FALSE, GetLastError, LUID};
 use windows_sys::Win32::Security::{
-    AdjustTokenPrivileges, LookupPrivilegeValueA, SE_PRIVILEGE_ENABLED,
-    TOKEN_ADJUST_PRIVILEGES, TOKEN_PRIVILEGES,
+    AdjustTokenPrivileges, LookupPrivilegeValueA, SE_PRIVILEGE_ENABLED, TOKEN_ADJUST_PRIVILEGES,
+    TOKEN_PRIVILEGES,
 };
 use windows_sys::Win32::System::Registry::*;
 use windows_sys::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
@@ -50,7 +50,12 @@ fn enable_backup_privilege() -> u32 {
 
         let mut luid: LUID = core::mem::zeroed();
         let priv_name = rustbof::str::to_cstr("SeBackupPrivilege");
-        if LookupPrivilegeValueA(core::ptr::null(), priv_name.as_ptr() as *const u8, &mut luid) == FALSE {
+        if LookupPrivilegeValueA(
+            core::ptr::null(),
+            priv_name.as_ptr() as *const u8,
+            &mut luid,
+        ) == FALSE
+        {
             let err = GetLastError();
             CloseHandle(token);
             return err;
@@ -100,14 +105,20 @@ fn main(args: *mut u8, len: usize) {
     let (hive_key, subkey) = match hive_from_name(&hive_str) {
         Some(h) => h,
         None => {
-            eprintln!("Invalid hive: {} (use HKLM, HKCU, HKCR, HKU, SAM, SYSTEM, SECURITY)", hive_str);
+            eprintln!(
+                "Invalid hive: {} (use HKLM, HKCU, HKCR, HKU, SAM, SYSTEM, SECURITY)",
+                hive_str
+            );
             return;
         }
     };
 
     let status = enable_backup_privilege();
     if status != 0 {
-        eprintln!("WARNING: Failed to enable SeBackupPrivilege: 0x{:X}", status);
+        eprintln!(
+            "WARNING: Failed to enable SeBackupPrivilege: 0x{:X}",
+            status
+        );
     } else {
         println!("Enabled SeBackupPrivilege");
     }
@@ -140,7 +151,10 @@ fn main(args: *mut u8, len: usize) {
             core::ptr::null(),
         );
         if ret != 0 {
-            eprintln!("RegSaveKeyA failed for {} to '{}': 0x{:X}", hive_str, output_path, ret);
+            eprintln!(
+                "RegSaveKeyA failed for {} to '{}': 0x{:X}",
+                hive_str, output_path, ret
+            );
         } else {
             println!("SUCCESS: Saved {} hive to '{}'", hive_str, output_path);
         }

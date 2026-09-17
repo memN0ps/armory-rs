@@ -18,7 +18,7 @@ use core::ptr::null_mut;
 use rustbof::str::from_wide;
 use rustbof::{eprintln, println};
 use windows_sys::Win32::Foundation::{CloseHandle, HANDLE, NTSTATUS};
-use windows_sys::Win32::Security::{GetTokenInformation, TokenStatistics, TOKEN_QUERY};
+use windows_sys::Win32::Security::{GetTokenInformation, TOKEN_QUERY, TokenStatistics};
 use windows_sys::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
 #[repr(C)]
 struct UnicodeString {
@@ -76,18 +76,17 @@ unsafe extern "system" {
 
     fn LsaFreeReturnBuffer(buffer: *mut core::ffi::c_void) -> NTSTATUS;
 
-    fn FileTimeToSystemTime(
-        lpFileTime: *const i64,
-        lpSystemTime: *mut SystemTime,
-    ) -> i32;
+    fn FileTimeToSystemTime(lpFileTime: *const i64, lpSystemTime: *mut SystemTime) -> i32;
 }
 unsafe fn unicode_string_to_string(us: &UnicodeString) -> String {
-    if us.buffer.is_null() || us.length == 0 {
-        return String::new();
+    unsafe {
+        if us.buffer.is_null() || us.length == 0 {
+            return String::new();
+        }
+        let len = (us.length as usize) / 2;
+        let slice = core::slice::from_raw_parts(us.buffer, len);
+        from_wide(slice)
     }
-    let len = (us.length as usize) / 2;
-    let slice = core::slice::from_raw_parts(us.buffer, len);
-    from_wide(slice)
 }
 
 fn filetime_to_string(ft: i64) -> String {
@@ -113,7 +112,12 @@ fn filetime_to_string(ft: i64) -> String {
 
     alloc::format!(
         "{:04}-{:02}-{:02} {:02}:{:02}:{:02}",
-        st.year, st.month, st.day, st.hour, st.minute, st.second
+        st.year,
+        st.month,
+        st.day,
+        st.hour,
+        st.minute,
+        st.second
     )
 }
 
@@ -166,7 +170,10 @@ fn main() {
 
         let status = LsaGetLogonSessionData(&mut auth_id, &mut session_data);
         if status != 0 {
-            eprintln!("LsaGetLogonSessionData failed with NTSTATUS: 0x{:08X}", status as u32);
+            eprintln!(
+                "LsaGetLogonSessionData failed with NTSTATUS: 0x{:08X}",
+                status as u32
+            );
             return;
         }
 
@@ -195,12 +202,18 @@ fn main() {
 
         println!("  UserName              : {}", display_user);
         println!("  AuthenticationPackage : {}", auth_package);
-        println!("  LogonType             : {}", logon_type_str(data.logon_type));
+        println!(
+            "  LogonType             : {}",
+            logon_type_str(data.logon_type)
+        );
         println!("  Session               : {}", data.session);
         println!("  LogonServer           : {}", logon_server);
         println!("  DnsDomainName         : {}", dns_domain);
         println!("  UPN                   : {}", upn);
-        println!("  LogonTime             : {}", filetime_to_string(data.logon_time));
+        println!(
+            "  LogonTime             : {}",
+            filetime_to_string(data.logon_time)
+        );
 
         LsaFreeReturnBuffer(session_data as *mut core::ffi::c_void);
     }

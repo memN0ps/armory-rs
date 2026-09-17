@@ -16,7 +16,6 @@
 #![no_std]
 
 use alloc::string::String;
-use alloc::vec;
 use alloc::vec::Vec;
 use rustbof::data::DataParser;
 use rustbof::{eprintln, println};
@@ -35,12 +34,8 @@ unsafe extern "C" {
         option: i32,
         value: *const core::ffi::c_void,
     ) -> u32;
-    fn ldap_bind_sA(
-        ld: *mut core::ffi::c_void,
-        dn: *const u8,
-        cred: *const u8,
-        method: u32,
-    ) -> u32;
+    fn ldap_bind_sA(ld: *mut core::ffi::c_void, dn: *const u8, cred: *const u8, method: u32)
+    -> u32;
     fn ldap_search_sA(
         ld: *mut core::ffi::c_void,
         base: *const u8,
@@ -50,10 +45,7 @@ unsafe extern "C" {
         attrsonly: u32,
         res: *mut *mut core::ffi::c_void,
     ) -> u32;
-    fn ldap_count_entries(
-        ld: *mut core::ffi::c_void,
-        res: *mut core::ffi::c_void,
-    ) -> u32;
+    fn ldap_count_entries(ld: *mut core::ffi::c_void, res: *mut core::ffi::c_void) -> u32;
     fn ldap_first_entry(
         ld: *mut core::ffi::c_void,
         res: *mut core::ffi::c_void,
@@ -110,15 +102,17 @@ unsafe extern "system" {
     fn NetApiBufferFree(buffer: *const core::ffi::c_void) -> u32;
 }
 unsafe fn cstr_to_string(ptr: *const u8) -> String {
-    if ptr.is_null() {
-        return String::new();
+    unsafe {
+        if ptr.is_null() {
+            return String::new();
+        }
+        let mut len = 0usize;
+        while *ptr.add(len) != 0 {
+            len += 1;
+        }
+        let slice = core::slice::from_raw_parts(ptr, len);
+        String::from_utf8_lossy(slice).into_owned()
     }
-    let mut len = 0usize;
-    while *ptr.add(len) != 0 {
-        len += 1;
-    }
-    let slice = core::slice::from_raw_parts(ptr, len);
-    String::from_utf8_lossy(slice).into_owned()
 }
 
 fn to_cstr_bytes(s: &str) -> Vec<u8> {
@@ -128,76 +122,80 @@ fn to_cstr_bytes(s: &str) -> Vec<u8> {
     v
 }
 unsafe fn get_default_naming_context(ld: *mut core::ffi::c_void) -> Option<String> {
-    let base = b"\0";
-    let filter = b"(objectClass=*)\0";
-    let attr_name = b"defaultNamingContext\0";
-    let attrs: [*const u8; 2] = [attr_name.as_ptr(), core::ptr::null()];
+    unsafe {
+        let base = b"\0";
+        let filter = b"(objectClass=*)\0";
+        let attr_name = b"defaultNamingContext\0";
+        let attrs: [*const u8; 2] = [attr_name.as_ptr(), core::ptr::null()];
 
-    let mut res: *mut core::ffi::c_void = core::ptr::null_mut();
-    let rc = ldap_search_sA(
-        ld,
-        base.as_ptr(),
-        LDAP_SCOPE_BASE,
-        filter.as_ptr(),
-        attrs.as_ptr(),
-        0,
-        &mut res,
-    );
+        let mut res: *mut core::ffi::c_void = core::ptr::null_mut();
+        let rc = ldap_search_sA(
+            ld,
+            base.as_ptr(),
+            LDAP_SCOPE_BASE,
+            filter.as_ptr(),
+            attrs.as_ptr(),
+            0,
+            &mut res,
+        );
 
-    if rc != LDAP_SUCCESS || res.is_null() {
-        return None;
-    }
+        if rc != LDAP_SUCCESS || res.is_null() {
+            return None;
+        }
 
-    let entry = ldap_first_entry(ld, res);
-    if entry.is_null() {
+        let entry = ldap_first_entry(ld, res);
+        if entry.is_null() {
+            ldap_msgfree(res);
+            return None;
+        }
+
+        let vals = ldap_get_valuesA(ld, entry, attr_name.as_ptr());
+        if vals.is_null() {
+            ldap_msgfree(res);
+            return None;
+        }
+
+        let first = *vals;
+        let result = if !first.is_null() {
+            Some(cstr_to_string(first))
+        } else {
+            None
+        };
+
+        ldap_value_freeA(vals);
         ldap_msgfree(res);
-        return None;
+        result
     }
-
-    let vals = ldap_get_valuesA(ld, entry, attr_name.as_ptr());
-    if vals.is_null() {
-        ldap_msgfree(res);
-        return None;
-    }
-
-    let first = *vals;
-    let result = if !first.is_null() {
-        Some(cstr_to_string(first))
-    } else {
-        None
-    };
-
-    ldap_value_freeA(vals);
-    ldap_msgfree(res);
-    result
 }
 
 unsafe fn print_entry(ld: *mut core::ffi::c_void, entry: *mut core::ffi::c_void) {
-    let mut ber: *mut core::ffi::c_void = core::ptr::null_mut();
-    let mut attr_ptr = ldap_first_attributeA(ld, entry, &mut ber);
+    unsafe {
+        let mut ber: *mut core::ffi::c_void = core::ptr::null_mut();
+        let mut attr_ptr = ldap_first_attributeA(ld, entry, &mut ber);
 
-    while !attr_ptr.is_null() {
-        let attr_name = cstr_to_string(attr_ptr);
+        while !attr_ptr.is_null() {
+            let attr_name = cstr_to_string(attr_ptr);
 
-        let vals = ldap_get_valuesA(ld, entry, attr_ptr);
-        if !vals.is_null() {
-            let mut i = 0usize;
-            loop {
-                let val = *vals.add(i);
-                if val.is_null() {
-                    break;
+            let vals = ldap_get_valuesA(ld, entry, attr_ptr);
+            if !vals.is_null() {
+                let mut i = 0usize;
+                loop {
+                    let val = *vals.add(i);
+                    if val.is_null() {
+                        break;
+                    }
+                    let val_str = cstr_to_string(val);
+                    println!("    {}: {}", attr_name, val_str);
+                    i += 1;
                 }
-                let val_str = cstr_to_string(val);
-                println!("    {}: {}", attr_name, val_str);
-                i += 1;
+                ldap_value_freeA(vals);
+            } else {
+                println!("    {}: <no values>", attr_name);
             }
-            ldap_value_freeA(vals);
-        } else {
-            println!("    {}: <no values>", attr_name);
-        }
 
-        ldap_memfreeA(attr_ptr);
-        attr_ptr = ldap_next_attributeA(ld, entry, ber);
+            ldap_memfreeA(attr_ptr);
+            attr_ptr = ldap_next_attributeA(ld, entry, ber);
+        }
     }
 }
 #[rustbof::main]
@@ -261,7 +259,12 @@ fn main(args: *mut u8, len: usize) {
             &off as *const u32 as *const core::ffi::c_void,
         );
 
-        let rc = ldap_bind_sA(ld, core::ptr::null(), core::ptr::null(), LDAP_AUTH_NEGOTIATE);
+        let rc = ldap_bind_sA(
+            ld,
+            core::ptr::null(),
+            core::ptr::null(),
+            LDAP_AUTH_NEGOTIATE,
+        );
         if rc != LDAP_SUCCESS {
             eprintln!("ldap_bind_sA failed with error: {}", rc);
             ldap_unbind(ld);
@@ -284,21 +287,16 @@ fn main(args: *mut u8, len: usize) {
         };
         println!("Base DN: {}", base_dn);
 
-        let attr_cstrs: Vec<Vec<u8>>;
-        let attr_ptrs: Vec<*const u8>;
-
-        if attrs_str == "*" || attrs_str.is_empty() {
-            attr_cstrs = Vec::new();
-            attr_ptrs = vec![core::ptr::null()];
+        let attr_cstrs: Vec<Vec<u8>> = if attrs_str == "*" || attrs_str.is_empty() {
+            Vec::new()
         } else {
-            attr_cstrs = attrs_str
+            attrs_str
                 .split(',')
                 .map(|a| to_cstr_bytes(a.trim()))
-                .collect();
-            let mut ptrs: Vec<*const u8> = attr_cstrs.iter().map(|c| c.as_ptr()).collect();
-            ptrs.push(core::ptr::null()); // null-terminate the array
-            attr_ptrs = ptrs;
-        }
+                .collect()
+        };
+        let mut attr_ptrs: Vec<*const u8> = attr_cstrs.iter().map(|c| c.as_ptr()).collect();
+        attr_ptrs.push(core::ptr::null());
 
         let attrs_param = if attrs_str == "*" || attrs_str.is_empty() {
             core::ptr::null()

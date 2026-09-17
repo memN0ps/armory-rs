@@ -1,4 +1,5 @@
 [env]
+CARGO_TARGET_DIR = "target"
 LIBS = "-lkernel32 -lole32 -lvssapi"
 NAME = "vssenum"
 OUT_DIR = "out"

@@ -1,3 +1,13 @@
+//! # Network Configuration BOF
+//!
+//! Lists local adapter, DNS, gateway, DHCP, and address configuration.
+//!
+//! ## Arguments
+//! - None.
+//!
+//! ## MITRE ATT&CK
+//! - T1016 - System Network Configuration Discovery
+
 #![no_std]
 
 use alloc::format;
@@ -10,9 +20,8 @@ use rustbof::str::from_cstr;
 use rustbof::{eprintln, println};
 use windows_sys::Win32::Foundation::{ERROR_BUFFER_OVERFLOW, ERROR_SUCCESS};
 use windows_sys::Win32::NetworkManagement::IpHelper::{
-    FIXED_INFO_W2KSP1, GetAdaptersInfo, GetNetworkParams,
-    IF_TYPE_IEEE80211, IP_ADAPTER_INFO, MIB_IF_TYPE_ETHERNET,
-    MIB_IF_TYPE_FDDI, MIB_IF_TYPE_LOOPBACK, MIB_IF_TYPE_PPP,
+    FIXED_INFO_W2KSP1, GetAdaptersInfo, GetNetworkParams, IF_TYPE_IEEE80211, IP_ADAPTER_INFO,
+    MIB_IF_TYPE_ETHERNET, MIB_IF_TYPE_FDDI, MIB_IF_TYPE_LOOPBACK, MIB_IF_TYPE_PPP,
     MIB_IF_TYPE_SLIP, MIB_IF_TYPE_TOKENRING,
 };
 
@@ -92,17 +101,26 @@ fn show_adapters() -> Result<(), u32> {
             let m = &a.Address;
             let mut rows: Vec<(&str, String)> = Vec::new();
 
-            rows.push(("Physical Address", format!(
-                "{:02X}-{:02X}-{:02X}-{:02X}-{:02X}-{:02X}",
-                m[0], m[1], m[2], m[3], m[4], m[5]
-            )));
+            rows.push((
+                "Physical Address",
+                format!(
+                    "{:02X}-{:02X}-{:02X}-{:02X}-{:02X}-{:02X}",
+                    m[0], m[1], m[2], m[3], m[4], m[5]
+                ),
+            ));
 
-            rows.push(("DHCP Enabled", (if a.DhcpEnabled != 0 { "Yes" } else { "No" }).into()));
+            rows.push((
+                "DHCP Enabled",
+                (if a.DhcpEnabled != 0 { "Yes" } else { "No" }).into(),
+            ));
 
             let ip = from_cstr(&a.IpAddressList.IpAddress.String);
             if !ip.is_empty() {
                 rows.push(("IPv4 Address", ip.into()));
-                rows.push(("Subnet Mask", from_cstr(&a.IpAddressList.IpMask.String).into()));
+                rows.push((
+                    "Subnet Mask",
+                    from_cstr(&a.IpAddressList.IpMask.String).into(),
+                ));
             }
 
             let gw = from_cstr(&a.GatewayList.IpAddress.String);
@@ -134,7 +152,11 @@ fn print_rows(rows: &[(&str, String)]) {
             println!("   {: <WIDTH$}   {}", "", value);
         } else {
             let remaining = WIDTH - label.len();
-            let pad = format!("{}{}", " ".repeat(remaining % 2), ". ".repeat(remaining / 2));
+            let pad = format!(
+                "{}{}",
+                " ".repeat(remaining % 2),
+                ". ".repeat(remaining / 2)
+            );
             println!("   {}{} : {}", label, pad, value);
         }
     }

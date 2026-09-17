@@ -1,4 +1,5 @@
 [env]
+CARGO_TARGET_DIR = "target"
 LIBS = "-lkernel32 -ladvapi32 -lsecur32 -lntdll -lws2_32"
 NAME = "changepw"
 OUT_DIR = "out"

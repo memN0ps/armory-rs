@@ -25,11 +25,11 @@ const SERVICE_CONFIG_FAILURE_ACTIONS: u32 = 2;
 
 #[repr(C)]
 struct ServiceFailureActionsA {
-    dwResetPeriod: u32,
-    lpRebootMsg: *const u8,
-    lpCommand: *const u8,
-    cActions: u32,
-    lpsaActions: *const ScAction,
+    dw_reset_period: u32,
+    lp_reboot_msg: *const u8,
+    lp_command: *const u8,
+    c_actions: u32,
+    lpsa_actions: *const ScAction,
 }
 
 #[repr(C)]
@@ -50,12 +50,14 @@ fn action_type_str(t: u32) -> &'static str {
 }
 
 unsafe fn read_cstr(ptr: *const u8) -> &'static str {
-    if ptr.is_null() {
-        "(null)"
-    } else {
-        CStr::from_ptr(ptr as *const i8)
-            .to_str()
-            .unwrap_or("(invalid)")
+    unsafe {
+        if ptr.is_null() {
+            "(null)"
+        } else {
+            CStr::from_ptr(ptr as *const i8)
+                .to_str()
+                .unwrap_or("(invalid)")
+        }
     }
 }
 
@@ -136,13 +138,17 @@ fn main(args: *mut u8, len: usize) {
         let fa = &*(buf.as_ptr() as *const ServiceFailureActionsA);
 
         println!("SERVICE_NAME: {}", service_name);
-        println!("\t{:<20} : {} seconds", "RESET_PERIOD", fa.dwResetPeriod);
-        println!("\t{:<20} : {}", "REBOOT_MESSAGE", read_cstr(fa.lpRebootMsg));
-        println!("\t{:<20} : {}", "COMMAND", read_cstr(fa.lpCommand));
-        println!("\t{:<20} : {}", "NUM_ACTIONS", fa.cActions);
+        println!("\t{:<20} : {} seconds", "RESET_PERIOD", fa.dw_reset_period);
+        println!(
+            "\t{:<20} : {}",
+            "REBOOT_MESSAGE",
+            read_cstr(fa.lp_reboot_msg)
+        );
+        println!("\t{:<20} : {}", "COMMAND", read_cstr(fa.lp_command));
+        println!("\t{:<20} : {}", "NUM_ACTIONS", fa.c_actions);
 
-        if !fa.lpsaActions.is_null() && fa.cActions > 0 {
-            let actions = core::slice::from_raw_parts(fa.lpsaActions, fa.cActions as usize);
+        if !fa.lpsa_actions.is_null() && fa.c_actions > 0 {
+            let actions = core::slice::from_raw_parts(fa.lpsa_actions, fa.c_actions as usize);
             for (i, action) in actions.iter().enumerate() {
                 println!(
                     "\tACTION[{}]             : {} (delay: {} ms)",

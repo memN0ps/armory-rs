@@ -18,9 +18,7 @@ use windows_sys::Win32::UI::WindowsAndMessaging::*;
 #[rustbof::main]
 fn main() {
     let notepad_class = b"Notepad\0";
-    let notepad_hwnd: HWND = unsafe {
-        FindWindowA(notepad_class.as_ptr(), core::ptr::null())
-    };
+    let notepad_hwnd: HWND = unsafe { FindWindowA(notepad_class.as_ptr(), core::ptr::null()) };
     if notepad_hwnd.is_null() {
         eprintln!("Notepad window not found");
         return;
@@ -29,12 +27,22 @@ fn main() {
 
     let edit_class = b"Edit\0";
     let mut edit_hwnd: HWND = unsafe {
-        FindWindowExA(notepad_hwnd, core::ptr::null_mut(), edit_class.as_ptr(), core::ptr::null())
+        FindWindowExA(
+            notepad_hwnd,
+            core::ptr::null_mut(),
+            edit_class.as_ptr(),
+            core::ptr::null(),
+        )
     };
     if edit_hwnd.is_null() {
         let rich_class = b"RichEditD2DPT\0";
         edit_hwnd = unsafe {
-            FindWindowExA(notepad_hwnd, core::ptr::null_mut(), rich_class.as_ptr(), core::ptr::null())
+            FindWindowExA(
+                notepad_hwnd,
+                core::ptr::null_mut(),
+                rich_class.as_ptr(),
+                core::ptr::null(),
+            )
         };
     }
     if edit_hwnd.is_null() {
@@ -51,7 +59,12 @@ fn main() {
 
         let buf_size = text_len + 1;
         let mut buffer = vec![0u8; buf_size];
-        SendMessageA(edit_hwnd, WM_GETTEXT, buf_size, buffer.as_mut_ptr() as isize);
+        SendMessageA(
+            edit_hwnd,
+            WM_GETTEXT,
+            buf_size,
+            buffer.as_mut_ptr() as isize,
+        );
 
         let text = core::str::from_utf8(&buffer[..text_len]).unwrap_or("<non-utf8>");
         println!("Notepad content ({} chars):\n{}", text_len, text);

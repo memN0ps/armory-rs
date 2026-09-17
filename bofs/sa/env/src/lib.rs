@@ -1,9 +1,17 @@
+//! # Environment BOF
+//!
+//! Lists environment variables visible to the current Beacon process.
+//!
+//! ## Arguments
+//! - None.
+//!
+//! ## MITRE ATT&CK
+//! - T1082 - System Information Discovery
+
 #![no_std]
 
 use rustbof::{eprintln, println};
-use windows_sys::Win32::System::Environment::{
-    FreeEnvironmentStringsA, GetEnvironmentStrings
-};
+use windows_sys::Win32::System::Environment::{FreeEnvironmentStringsA, GetEnvironmentStrings};
 
 #[rustbof::main]
 fn main() {

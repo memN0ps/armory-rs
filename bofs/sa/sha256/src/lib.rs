@@ -73,7 +73,14 @@ fn sha256_file(path: &str) {
 
         let mut sha256 = [0u8; 32];
         let mut hash_len: u32 = 32;
-        if CryptGetHashParam(hash_handle, HP_HASHVAL, sha256.as_mut_ptr(), &mut hash_len, 0) != 0 {
+        if CryptGetHashParam(
+            hash_handle,
+            HP_HASHVAL,
+            sha256.as_mut_ptr(),
+            &mut hash_len,
+            0,
+        ) != 0
+        {
             let mut hex = alloc::string::String::with_capacity(64);
             for byte in &sha256[..hash_len as usize] {
                 hex.push_str(&alloc::format!("{:02X}", byte));

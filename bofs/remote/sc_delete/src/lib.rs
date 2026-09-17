@@ -16,7 +16,7 @@
 use alloc::string::String;
 use rustbof::data::DataParser;
 use rustbof::{eprintln, println};
-use windows_sys::Win32::Foundation::{GetLastError, FALSE};
+use windows_sys::Win32::Foundation::{FALSE, GetLastError};
 use windows_sys::Win32::System::Services::{
     CloseServiceHandle, DeleteService, OpenSCManagerA, OpenServiceA, SC_MANAGER_CONNECT,
 };
@@ -32,11 +32,7 @@ fn delete_service(hostname: *const u8, service_name: &core::ffi::CStr) -> u32 {
             return err;
         }
 
-        let sc_service = OpenServiceA(
-            sc_manager,
-            service_name.as_ptr() as *const u8,
-            DELETE,
-        );
+        let sc_service = OpenServiceA(sc_manager, service_name.as_ptr() as *const u8, DELETE);
         if sc_service.is_null() {
             let err = GetLastError();
             eprintln!("OpenServiceA failed ({:#X})", err);

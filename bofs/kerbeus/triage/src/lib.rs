@@ -24,7 +24,6 @@ use windows_sys::Win32::Security::Authentication::Identity::*;
 use windows_sys::Win32::Security::*;
 use windows_sys::Win32::System::Threading::*;
 
-
 unsafe extern "system" {
     fn FileTimeToSystemTime(ft: *const i64, st: *mut SYSTEMTIME) -> BOOL;
 }
@@ -46,7 +45,12 @@ fn filetime_to_string(li: i64) -> String {
         FileTimeToSystemTime(&li, &mut st);
         alloc::format!(
             "{:02}/{:02}/{:04} {:02}:{:02}:{:02}",
-            st.wDay, st.wMonth, st.wYear, st.wHour, st.wMinute, st.wSecond
+            st.wDay,
+            st.wMonth,
+            st.wYear,
+            st.wHour,
+            st.wMinute,
+            st.wSecond
         )
     }
 }
@@ -56,13 +60,19 @@ fn get_param<'a>(params: &'a str, name: &str) -> Option<&'a str> {
         let after = &params[pos + name.len()..];
         let end = after.find(' ').unwrap_or(after.len());
         let value = &after[..end];
-        if !value.is_empty() { return Some(value); }
+        if !value.is_empty() {
+            return Some(value);
+        }
     }
     None
 }
 
 fn hex_to_u32(s: &str) -> Option<u32> {
-    let s = if s.starts_with("0x") || s.starts_with("0X") { &s[2..] } else { s };
+    let s = if s.starts_with("0x") || s.starts_with("0X") {
+        &s[2..]
+    } else {
+        s
+    };
     let mut result = 0u32;
     for c in s.bytes() {
         let digit = match c {
@@ -79,12 +89,12 @@ fn hex_to_u32(s: &str) -> Option<u32> {
 fn get_current_token() -> HANDLE {
     unsafe {
         let mut token: HANDLE = core::ptr::null_mut();
-        if OpenThreadToken(GetCurrentThread(), TOKEN_QUERY, FALSE, &mut token) == 0 {
-            if token.is_null() && GetLastError() == ERROR_NO_TOKEN {
-                if OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token) == 0 {
-                    return core::ptr::null_mut();
-                }
-            }
+        if OpenThreadToken(GetCurrentThread(), TOKEN_QUERY, FALSE, &mut token) == 0
+            && token.is_null()
+            && GetLastError() == ERROR_NO_TOKEN
+            && OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token) == 0
+        {
+            return core::ptr::null_mut();
         }
         token
     }
@@ -102,7 +112,10 @@ fn get_current_luid(token: HANDLE) -> LUID {
             &mut size,
         ) == 0
         {
-            return LUID { LowPart: 0, HighPart: 0 };
+            return LUID {
+                LowPart: 0,
+                HighPart: 0,
+            };
         }
         stats.AuthenticationId
     }
@@ -124,7 +137,11 @@ fn is_system() -> bool {
         let mut buf = [0u8; 256];
         let mut size = 0u32;
         if GetTokenInformation(
-            token, TokenUser, buf.as_mut_ptr() as *mut c_void, buf.len() as u32, &mut size,
+            token,
+            TokenUser,
+            buf.as_mut_ptr() as *mut c_void,
+            buf.len() as u32,
+            &mut size,
         ) == 0
         {
             CloseHandle(token);
@@ -132,12 +149,12 @@ fn is_system() -> bool {
         }
 
         let token_user = &*(buf.as_ptr() as *const TOKEN_USER);
-        let nt_authority = SID_IDENTIFIER_AUTHORITY { Value: [0, 0, 0, 0, 0, 5] };
+        let nt_authority = SID_IDENTIFIER_AUTHORITY {
+            Value: [0, 0, 0, 0, 0, 5],
+        };
         let mut system_sid: PSID = core::ptr::null_mut();
 
-        if AllocateAndInitializeSid(
-            &nt_authority, 1, 18, 0, 0, 0, 0, 0, 0, 0, &mut system_sid,
-        ) == 0
+        if AllocateAndInitializeSid(&nt_authority, 1, 18, 0, 0, 0, 0, 0, 0, 0, &mut system_sid) == 0
         {
             CloseHandle(token);
             return false;
@@ -224,7 +241,10 @@ fn main(args: *mut u8, len: usize) {
         match hex_to_u32(luid_str) {
             Some(v) if v > 0 => {
                 println!("\nAction: List Kerberos Tickets (LUID: {})\n", luid_str);
-                LUID { LowPart: v, HighPart: 0 }
+                LUID {
+                    LowPart: v,
+                    HighPart: 0,
+                }
             }
             _ => {
                 eprintln!("[X] Invalid LUID");
@@ -237,20 +257,38 @@ fn main(args: *mut u8, len: usize) {
         } else {
             println!("\nAction: List Kerberos Tickets (All Users)\n");
         }
-        LUID { LowPart: 0, HighPart: 0 }
+        LUID {
+            LowPart: 0,
+            HighPart: 0,
+        }
     } else {
         println!("\nAction: List Kerberos Tickets (Current User)\n");
         get_current_luid(token)
     };
 
-    if let Some(s) = service_filter { println!("[*] Target service  : {}", s); }
-    if let Some(c) = client_filter { println!("[*] Target client   : {}", c); }
-    if let Some(u) = user_filter { println!("[*] Target user     : {}", u); }
-    if let Some(l) = luid_arg { println!("[*] Target LUID     : {}", l); }
+    if let Some(s) = service_filter {
+        println!("[*] Target service  : {}", s);
+    }
+    if let Some(c) = client_filter {
+        println!("[*] Target client   : {}", c);
+    }
+    if let Some(u) = user_filter {
+        println!("[*] Target user     : {}", u);
+    }
+    if let Some(l) = luid_arg {
+        println!("[*] Target LUID     : {}", l);
+    }
 
-    println!("--------------------------------------------------------------------------------------------------------------------------");
-    println!("| {:<13} | {:<40} | {:<40} | {:>19} |", "LUID", "Client", "Service", "End Time");
-    println!("--------------------------------------------------------------------------------------------------------------------------");
+    println!(
+        "--------------------------------------------------------------------------------------------------------------------------"
+    );
+    println!(
+        "| {:<13} | {:<40} | {:<40} | {:>19} |",
+        "LUID", "Client", "Service", "End Time"
+    );
+    println!(
+        "--------------------------------------------------------------------------------------------------------------------------"
+    );
 
     let hlsa = match get_lsa_handle(high_integrity) {
         Some(h) => h,
@@ -296,7 +334,14 @@ fn main(args: *mut u8, len: usize) {
 
             let mut cache_request = core::mem::zeroed::<KERB_QUERY_TKT_CACHE_REQUEST>();
             cache_request.MessageType = KerbQueryTicketCacheExMessage;
-            cache_request.LogonId = if high_integrity { user_luid } else { LUID { LowPart: 0, HighPart: 0 } };
+            cache_request.LogonId = if high_integrity {
+                user_luid
+            } else {
+                LUID {
+                    LowPart: 0,
+                    HighPart: 0,
+                }
+            };
 
             let mut response_ptr: *mut c_void = core::ptr::null_mut();
             let mut response_size = 0u32;
@@ -326,7 +371,10 @@ fn main(args: *mut u8, len: usize) {
 
                     if let Some(svc) = service_filter {
                         let sname = unicode_to_string(&ticket.ServerName);
-                        if !sname.to_ascii_lowercase().contains(&svc.to_ascii_lowercase()) {
+                        if !sname
+                            .to_ascii_lowercase()
+                            .contains(&svc.to_ascii_lowercase())
+                        {
                             continue;
                         }
                     }
@@ -344,18 +392,23 @@ fn main(args: *mut u8, len: usize) {
                         unicode_to_string(&ticket.ClientRealm)
                     );
                     let server_name = unicode_to_string(&ticket.ServerName);
-                    let luid_str = alloc::format!("{:x}:0x{:x}", user_luid.HighPart, user_luid.LowPart);
+                    let luid_str =
+                        alloc::format!("{:x}:0x{:x}", user_luid.HighPart, user_luid.LowPart);
                     let end_time = filetime_to_string(ticket.EndTime);
 
-                    println!("| {:<13} | {:<40} | {:<40} | {:>19} |",
-                        luid_str, client, server_name, end_time);
+                    println!(
+                        "| {:<13} | {:<40} | {:<40} | {:>19} |",
+                        luid_str, client, server_name, end_time
+                    );
                 }
             }
 
             LsaFreeReturnBuffer(response_ptr);
         }
 
-        println!("--------------------------------------------------------------------------------------------------------------------------");
+        println!(
+            "--------------------------------------------------------------------------------------------------------------------------"
+        );
         LsaDeregisterLogonProcess(hlsa);
     }
 }

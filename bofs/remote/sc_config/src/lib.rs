@@ -19,7 +19,7 @@
 use alloc::string::String;
 use rustbof::data::DataParser;
 use rustbof::{eprintln, println};
-use windows_sys::Win32::Foundation::{GetLastError, FALSE};
+use windows_sys::Win32::Foundation::{FALSE, GetLastError};
 use windows_sys::Win32::System::Services::{
     ChangeServiceConfigA, CloseServiceHandle, OpenSCManagerA, OpenServiceA, SC_MANAGER_CONNECT,
     SERVICE_CHANGE_CONFIG,
@@ -114,7 +114,13 @@ fn main(args: *mut u8, len: usize) {
         binpath_cstr.as_ptr() as *const u8
     };
 
-    let result = config_service(host_ptr, &service_cstr, binpath_ptr, start_type, error_control);
+    let result = config_service(
+        host_ptr,
+        &service_cstr,
+        binpath_ptr,
+        start_type,
+        error_control,
+    );
     if result != 0 {
         eprintln!("config_service failed: {:#X}", result);
     } else {

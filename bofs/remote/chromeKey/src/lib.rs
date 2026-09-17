@@ -100,7 +100,7 @@ fn main(args: *mut u8, len: usize) {
     let encrypted = &decoded[5..];
     println!("  Encrypted blob size: {} bytes", encrypted.len());
 
-    let mut data_in = DataBlob {
+    let data_in = DataBlob {
         cb_data: encrypted.len() as u32,
         pb_data: encrypted.as_ptr() as *mut u8,
     };

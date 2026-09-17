@@ -13,7 +13,6 @@
 #![no_std]
 
 use alloc::{string::String, vec};
-use core::ffi::c_void;
 use rustbof::data::DataParser;
 use rustbof::{eprintln, println};
 use windows_sys::Win32::Foundation::GetLastError;
@@ -81,10 +80,23 @@ fn query_single_service(hostname: *const u8, service_name: &str) {
             eprintln!("QueryServiceStatusEx failed: 0x{:X}", GetLastError());
         } else {
             println!("SERVICE_NAME: {}", service_name);
-            println!("\t{:<20} : {} {}", "TYPE", ssp.dwServiceType, service_type_str(ssp.dwServiceType));
-            println!("\t{:<20} : {} {}", "STATE", ssp.dwCurrentState, service_state_str(ssp.dwCurrentState));
+            println!(
+                "\t{:<20} : {} {}",
+                "TYPE",
+                ssp.dwServiceType,
+                service_type_str(ssp.dwServiceType)
+            );
+            println!(
+                "\t{:<20} : {} {}",
+                "STATE",
+                ssp.dwCurrentState,
+                service_state_str(ssp.dwCurrentState)
+            );
             println!("\t{:<20} : {}", "WIN32_EXIT_CODE", ssp.dwWin32ExitCode);
-            println!("\t{:<20} : {}", "SERVICE_EXIT_CODE", ssp.dwServiceSpecificExitCode);
+            println!(
+                "\t{:<20} : {}",
+                "SERVICE_EXIT_CODE", ssp.dwServiceSpecificExitCode
+            );
             println!("\t{:<20} : {}", "CHECKPOINT", ssp.dwCheckPoint);
             println!("\t{:<20} : {}", "WAIT_HINT", ssp.dwWaitHint);
             println!("\t{:<20} : {}", "PID", ssp.dwProcessId);
@@ -162,8 +174,9 @@ fn enumerate_all_services(hostname: *const u8) {
             let ssp = &entry.ServiceStatusProcess;
 
             println!(
-                "{:<40} {:<8} {:<20} PID:{}",
+                "{:<32} {:<40} {:<8} {:<20} PID:{}",
                 name,
+                display,
                 service_state_str(ssp.dwCurrentState),
                 service_type_str(ssp.dwServiceType),
                 ssp.dwProcessId

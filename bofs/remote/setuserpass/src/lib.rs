@@ -59,7 +59,11 @@ fn main(args: *mut u8, len: usize) {
     println!(
         "Setting password for user '{}' on '{}'...",
         username,
-        if hostname.is_empty() { "localhost" } else { &hostname }
+        if hostname.is_empty() {
+            "localhost"
+        } else {
+            &hostname
+        }
     );
 
     let mut parm_err: u32 = 0;

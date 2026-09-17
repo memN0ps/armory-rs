@@ -18,9 +18,7 @@ use alloc::string::String;
 use rustbof::data::DataParser;
 use rustbof::{eprintln, println};
 use windows_sys::Win32::Foundation::GetLastError;
-use windows_sys::Win32::System::Services::{
-    CloseServiceHandle, CreateServiceA, OpenSCManagerA,
-};
+use windows_sys::Win32::System::Services::{CloseServiceHandle, CreateServiceA, OpenSCManagerA};
 
 const SC_MANAGER_CREATE_SERVICE: u32 = 0x0002;
 const SERVICE_ALL_ACCESS: u32 = 0xF01FF;

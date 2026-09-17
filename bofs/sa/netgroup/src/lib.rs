@@ -96,7 +96,10 @@ fn main(args: *mut u8, len: usize) {
 
 fn list_groups(server: *const u16) {
     unsafe {
-        println!("{:<40} {:<40} {:<10} {}", "Group Name", "Comment", "Group ID", "Attributes");
+        println!(
+            "{:<40} {:<40} {:<10} {}",
+            "Group Name", "Comment", "Group ID", "Attributes"
+        );
         println!("{:-<40} {:-<40} {:-<10} {:-<10}", "", "", "", "");
 
         let mut index: u32 = 0;

@@ -1,4 +1,5 @@
 [env]
+CARGO_TARGET_DIR = "target"
 LIBS = "-lkernel32 -ladvapi32"
 NAME = "sha256"
 OUT_DIR = "out"

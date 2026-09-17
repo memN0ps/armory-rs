@@ -213,7 +213,7 @@ pub fn decrypt(input: &[u8], keys: &LsaKeys) -> Result<SecretBuffer, CryptoError
         return Err(CryptoError::InvalidInput);
     }
 
-    let use_aes = !input.len().is_multiple_of(8);
+    let use_aes = input.len() % 8 != 0;
     let mut algorithm = ptr::null_mut();
     let provider = if use_aes { AES } else { TRIPLE_DES };
     let status = unsafe {

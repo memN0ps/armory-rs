@@ -33,12 +33,8 @@ unsafe extern "C" {
         option: i32,
         value: *const core::ffi::c_void,
     ) -> u32;
-    fn ldap_bind_sA(
-        ld: *mut core::ffi::c_void,
-        dn: *const u8,
-        cred: *const u8,
-        method: u32,
-    ) -> u32;
+    fn ldap_bind_sA(ld: *mut core::ffi::c_void, dn: *const u8, cred: *const u8, method: u32)
+    -> u32;
     fn ldap_search_sA(
         ld: *mut core::ffi::c_void,
         base: *const u8,
@@ -90,15 +86,17 @@ unsafe extern "system" {
     fn NetApiBufferFree(buffer: *const core::ffi::c_void) -> u32;
 }
 unsafe fn cstr_to_string(ptr: *const u8) -> String {
-    if ptr.is_null() {
-        return String::new();
+    unsafe {
+        if ptr.is_null() {
+            return String::new();
+        }
+        let mut len = 0usize;
+        while *ptr.add(len) != 0 {
+            len += 1;
+        }
+        let slice = core::slice::from_raw_parts(ptr, len);
+        String::from_utf8_lossy(slice).into_owned()
     }
-    let mut len = 0usize;
-    while *ptr.add(len) != 0 {
-        len += 1;
-    }
-    let slice = core::slice::from_raw_parts(ptr, len);
-    String::from_utf8_lossy(slice).into_owned()
 }
 
 fn to_cstr_bytes(s: &str) -> Vec<u8> {
@@ -146,7 +144,10 @@ fn main(args: *mut u8, len: usize) {
 
         println!("\n=== LDAP Security Check: {} ===\n", dc_host);
 
-        println!("[*] Testing LDAP signing requirement (port {})...", LDAP_PORT);
+        println!(
+            "[*] Testing LDAP signing requirement (port {})...",
+            LDAP_PORT
+        );
 
         let ld = ldap_initA(dc_cstr.as_ptr(), LDAP_PORT);
         if ld.is_null() {
@@ -159,12 +160,7 @@ fn main(args: *mut u8, len: usize) {
                 &off as *const u32 as *const core::ffi::c_void,
             );
 
-            let rc = ldap_bind_sA(
-                ld,
-                core::ptr::null(),
-                core::ptr::null(),
-                LDAP_AUTH_SIMPLE,
-            );
+            let rc = ldap_bind_sA(ld, core::ptr::null(), core::ptr::null(), LDAP_AUTH_SIMPLE);
 
             if rc == LDAP_SUCCESS {
                 println!("[!] LDAP signing NOT required - VULNERABLE");
@@ -191,7 +187,12 @@ fn main(args: *mut u8, len: usize) {
                 &off as *const u32 as *const core::ffi::c_void,
             );
 
-            let rc = ldap_bind_sA(ld2, core::ptr::null(), core::ptr::null(), LDAP_AUTH_NEGOTIATE);
+            let rc = ldap_bind_sA(
+                ld2,
+                core::ptr::null(),
+                core::ptr::null(),
+                LDAP_AUTH_NEGOTIATE,
+            );
             if rc == LDAP_SUCCESS {
                 println!("[+] Authenticated LDAP bind succeeded.");
 
@@ -255,13 +256,21 @@ fn main(args: *mut u8, len: usize) {
                 println!("[-] LDAPS: Failed to set SSL option: {}", opt_rc);
             }
 
-            let rc = ldap_bind_sA(ld3, core::ptr::null(), core::ptr::null(), LDAP_AUTH_NEGOTIATE);
+            let rc = ldap_bind_sA(
+                ld3,
+                core::ptr::null(),
+                core::ptr::null(),
+                LDAP_AUTH_NEGOTIATE,
+            );
             if rc == LDAP_SUCCESS {
                 println!("[+] LDAPS connection succeeded - SSL/TLS is available.");
                 println!("    Channel binding can be enforced over LDAPS.");
             } else {
                 let err = LdapGetLastError();
-                println!("[-] LDAPS bind failed: {} (0x{:X}), last error: {}", rc, rc, err);
+                println!(
+                    "[-] LDAPS bind failed: {} (0x{:X}), last error: {}",
+                    rc, rc, err
+                );
                 println!("    Channel binding may be required or certificate issues exist.");
             }
             ldap_unbind(ld3);

@@ -1,4 +1,5 @@
 [env]
+CARGO_TARGET_DIR = "target"
 LIBS = "-lkernel32 -ladvapi32 -lbcrypt -lntdll -lfltlib"
 NAME = "kernel"
 OUT_DIR = "out"

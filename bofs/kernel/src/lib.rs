@@ -1,4 +1,17 @@
-//! Driver-agnostic Windows kernel research BOF.
+//! # Windows Kernel BOF
+//!
+//! Uses a separate vulnerable-driver adapter to inspect or change selected
+//! Windows kernel and VTL0 process state. The default build has no operational
+//! adapter and fails closed for driver-backed actions.
+//!
+//! ## Arguments
+//! - Optional `str`: Command and command-specific values. No argument prints
+//!   help.
+//!
+//! ## MITRE ATT&CK
+//! - T1562.001 - Impair Defenses: Disable or Modify Tools
+//! - T1003.001 - OS Credential Dumping: LSASS Memory
+//! - T1134.001 - Access Token Manipulation: Token Impersonation/Theft
 
 #![no_std]
 

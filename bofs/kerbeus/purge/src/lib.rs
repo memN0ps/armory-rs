@@ -25,13 +25,19 @@ fn get_param<'a>(params: &'a str, name: &str) -> Option<&'a str> {
         let after = &params[pos + name.len()..];
         let end = after.find(' ').unwrap_or(after.len());
         let value = &after[..end];
-        if !value.is_empty() { return Some(value); }
+        if !value.is_empty() {
+            return Some(value);
+        }
     }
     None
 }
 
 fn hex_to_u32(s: &str) -> Option<u32> {
-    let s = if s.starts_with("0x") || s.starts_with("0X") { &s[2..] } else { s };
+    let s = if s.starts_with("0x") || s.starts_with("0X") {
+        &s[2..]
+    } else {
+        s
+    };
     let mut result = 0u32;
     for c in s.bytes() {
         let digit = match c {
@@ -48,12 +54,12 @@ fn hex_to_u32(s: &str) -> Option<u32> {
 fn get_current_token() -> HANDLE {
     unsafe {
         let mut token: HANDLE = core::ptr::null_mut();
-        if OpenThreadToken(GetCurrentThread(), TOKEN_QUERY, FALSE, &mut token) == 0 {
-            if token.is_null() && GetLastError() == ERROR_NO_TOKEN {
-                if OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token) == 0 {
-                    return core::ptr::null_mut();
-                }
-            }
+        if OpenThreadToken(GetCurrentThread(), TOKEN_QUERY, FALSE, &mut token) == 0
+            && token.is_null()
+            && GetLastError() == ERROR_NO_TOKEN
+            && OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token) == 0
+        {
+            return core::ptr::null_mut();
         }
         token
     }
@@ -71,7 +77,10 @@ fn get_current_luid(token: HANDLE) -> LUID {
             &mut size,
         ) == 0
         {
-            return LUID { LowPart: 0, HighPart: 0 };
+            return LUID {
+                LowPart: 0,
+                HighPart: 0,
+            };
         }
         stats.AuthenticationId
     }
@@ -93,7 +102,11 @@ fn is_system() -> bool {
         let mut buf = [0u8; 256];
         let mut size = 0u32;
         if GetTokenInformation(
-            token, TokenUser, buf.as_mut_ptr() as *mut c_void, buf.len() as u32, &mut size,
+            token,
+            TokenUser,
+            buf.as_mut_ptr() as *mut c_void,
+            buf.len() as u32,
+            &mut size,
         ) == 0
         {
             CloseHandle(token);
@@ -101,12 +114,12 @@ fn is_system() -> bool {
         }
 
         let token_user = &*(buf.as_ptr() as *const TOKEN_USER);
-        let nt_authority = SID_IDENTIFIER_AUTHORITY { Value: [0, 0, 0, 0, 0, 5] };
+        let nt_authority = SID_IDENTIFIER_AUTHORITY {
+            Value: [0, 0, 0, 0, 0, 5],
+        };
         let mut system_sid: PSID = core::ptr::null_mut();
 
-        if AllocateAndInitializeSid(
-            &nt_authority, 1, 18, 0, 0, 0, 0, 0, 0, 0, &mut system_sid,
-        ) == 0
+        if AllocateAndInitializeSid(&nt_authority, 1, 18, 0, 0, 0, 0, 0, 0, 0, &mut system_sid) == 0
         {
             CloseHandle(token);
             return false;
@@ -156,7 +169,10 @@ fn main(args: *mut u8, len: usize) {
 
     let target_luid = if let Some(luid_str) = luid_arg {
         match hex_to_u32(luid_str) {
-            Some(v) if v > 0 => LUID { LowPart: v, HighPart: 0 },
+            Some(v) if v > 0 => LUID {
+                LowPart: v,
+                HighPart: 0,
+            },
             _ => {
                 eprintln!("[X] Invalid LUID");
                 return;
@@ -194,7 +210,14 @@ fn main(args: *mut u8, len: usize) {
 
         let mut purge_request = core::mem::zeroed::<KERB_PURGE_TKT_CACHE_REQUEST>();
         purge_request.MessageType = KerbPurgeTicketCacheMessage;
-        purge_request.LogonId = if high_integrity { target_luid } else { LUID { LowPart: 0, HighPart: 0 } };
+        purge_request.LogonId = if high_integrity {
+            target_luid
+        } else {
+            LUID {
+                LowPart: 0,
+                HighPart: 0,
+            }
+        };
 
         let mut response_ptr: *mut c_void = core::ptr::null_mut();
         let mut response_size = 0u32;

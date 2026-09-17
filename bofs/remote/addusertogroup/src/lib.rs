@@ -56,10 +56,15 @@ fn main(args: *mut u8, len: usize) {
         lgrmi3_domainandname: user_wide.as_ptr(),
     };
 
-    println!("Adding user '{}' to group '{}' on '{}'...",
+    println!(
+        "Adding user '{}' to group '{}' on '{}'...",
         username,
         groupname,
-        if hostname.is_empty() { "localhost" } else { &hostname }
+        if hostname.is_empty() {
+            "localhost"
+        } else {
+            &hostname
+        }
     );
 
     let status = unsafe {
@@ -73,7 +78,10 @@ fn main(args: *mut u8, len: usize) {
     };
 
     if status == 0 {
-        println!("SUCCESS: User '{}' added to group '{}'.", username, groupname);
+        println!(
+            "SUCCESS: User '{}' added to group '{}'.",
+            username, groupname
+        );
     } else {
         eprintln!("NetLocalGroupAddMembers failed: {}", status);
     }

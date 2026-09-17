@@ -54,13 +54,8 @@ fn main(args: *mut u8, len: usize) {
                 eprintln!("RegConnectRegistryA failed: {}", status);
                 return;
             }
-            let status = RegOpenKeyExA(
-                remote_key,
-                SERVICE_KEY.as_ptr(),
-                0,
-                KEY_READ,
-                &mut root_key,
-            );
+            let status =
+                RegOpenKeyExA(remote_key, SERVICE_KEY.as_ptr(), 0, KEY_READ, &mut root_key);
             if status != 0u32 {
                 eprintln!("RegOpenKeyExA failed: {}", status);
                 RegCloseKey(remote_key);
@@ -122,7 +117,14 @@ fn main(args: *mut u8, len: usize) {
                         }
 
                         let mut inst_subkey: HKEY = core::ptr::null_mut();
-                        if RegOpenKeyExA(inst_key, inst_name.as_ptr(), 0, KEY_READ, &mut inst_subkey) == 0 {
+                        if RegOpenKeyExA(
+                            inst_key,
+                            inst_name.as_ptr(),
+                            0,
+                            KEY_READ,
+                            &mut inst_subkey,
+                        ) == 0
+                        {
                             let mut alt_buf = [0u8; 260];
                             let mut alt_len: u32 = 260;
                             let mut alt_type: u32 = 0;

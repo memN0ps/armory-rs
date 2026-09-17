@@ -46,7 +46,7 @@ fn main() {
 
         let mut ft: FILETIME = core::mem::zeroed();
         SystemTimeToFileTime(&local_time, &mut ft);
-        let mut ftime: u64 = (ft.dwHighDateTime as u64) << 32 | ft.dwLowDateTime as u64;
+        let mut ftime: u64 = ((ft.dwHighDateTime as u64) << 32) | ft.dwLowDateTime as u64;
         ftime -= ticks * 10_000; // Convert ms to 100ns intervals
         let boot_ft = FILETIME {
             dwLowDateTime: ftime as u32,

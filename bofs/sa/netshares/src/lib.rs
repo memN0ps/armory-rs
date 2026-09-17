@@ -93,118 +93,116 @@ fn main(args: *mut u8, len: usize) {
 }
 
 unsafe fn enum_shares_admin(server_ptr: *const u16, display_host: &str) {
-    println!("Share enumeration (admin) at {}:\n", display_host);
-    println!(
-        "  {:<20} {:<10} {:<32} {:<40} {}",
-        "Name", "Type", "Remark", "Path", "Permissions"
-    );
-    println!(
-        "  {:<20} {:<10} {:<32} {:<40} {}",
-        "----", "----", "------", "----", "-----------"
-    );
-
-    let mut resume_handle: u32 = 0;
-
-    loop {
-        let mut buf: *mut u8 = core::ptr::null_mut();
-        let mut entries_read: u32 = 0;
-        let mut total_entries: u32 = 0;
-
-        let status = NetShareEnum(
-            server_ptr,
-            2,
-            &mut buf,
-            MAX_PREFERRED_LENGTH,
-            &mut entries_read,
-            &mut total_entries,
-            &mut resume_handle,
+    unsafe {
+        println!("Share enumeration (admin) at {}:\n", display_host);
+        println!(
+            "  {:<20} {:<10} {:<32} {:<40} {}",
+            "Name", "Type", "Remark", "Path", "Permissions"
+        );
+        println!(
+            "  {:<20} {:<10} {:<32} {:<40} {}",
+            "----", "----", "------", "----", "-----------"
         );
 
-        if status != NERR_SUCCESS && status != ERROR_MORE_DATA {
-            eprintln!("NetShareEnum (level 2) failed with error: {}", status);
-            break;
-        }
+        let mut resume_handle: u32 = 0;
 
-        if !buf.is_null() && entries_read > 0 {
-            let entries =
-                core::slice::from_raw_parts(buf as *const ShareInfo2, entries_read as usize);
+        loop {
+            let mut buf: *mut u8 = core::ptr::null_mut();
+            let mut entries_read: u32 = 0;
+            let mut total_entries: u32 = 0;
 
-            for entry in entries {
-                let name = wide_ptr_to_str(entry.shi2_netname);
-                let stype = share_type_str(entry.shi2_type);
-                let remark = wide_ptr_to_str(entry.shi2_remark);
-                let path = wide_ptr_to_str(entry.shi2_path);
-                let perms = entry.shi2_permissions;
+            let status = NetShareEnum(
+                server_ptr,
+                2,
+                &mut buf,
+                MAX_PREFERRED_LENGTH,
+                &mut entries_read,
+                &mut total_entries,
+                &mut resume_handle,
+            );
 
-                println!(
-                    "  {:<20} {:<10} {:<32} {:<40} {}",
-                    name, stype, remark, path, perms
-                );
+            if status != NERR_SUCCESS && status != ERROR_MORE_DATA {
+                eprintln!("NetShareEnum (level 2) failed with error: {}", status);
+                break;
             }
-        }
 
-        if !buf.is_null() {
-            NetApiBufferFree(buf as *mut _);
-        }
+            if !buf.is_null() && entries_read > 0 {
+                let entries =
+                    core::slice::from_raw_parts(buf as *const ShareInfo2, entries_read as usize);
 
-        if status != ERROR_MORE_DATA {
-            break;
+                for entry in entries {
+                    let name = wide_ptr_to_str(entry.shi2_netname);
+                    let stype = share_type_str(entry.shi2_type);
+                    let remark = wide_ptr_to_str(entry.shi2_remark);
+                    let path = wide_ptr_to_str(entry.shi2_path);
+                    let perms = entry.shi2_permissions;
+
+                    println!(
+                        "  {:<20} {:<10} {:<32} {:<40} {}",
+                        name, stype, remark, path, perms
+                    );
+                }
+            }
+
+            if !buf.is_null() {
+                NetApiBufferFree(buf as *mut _);
+            }
+
+            if status != ERROR_MORE_DATA {
+                break;
+            }
         }
     }
 }
 
 unsafe fn enum_shares_user(server_ptr: *const u16, display_host: &str) {
-    println!("Share enumeration (user) at {}:\n", display_host);
-    println!(
-        "  {:<20} {:<10} {}",
-        "Name", "Type", "Remark"
-    );
-    println!(
-        "  {:<20} {:<10} {}",
-        "----", "----", "------"
-    );
+    unsafe {
+        println!("Share enumeration (user) at {}:\n", display_host);
+        println!("  {:<20} {:<10} {}", "Name", "Type", "Remark");
+        println!("  {:<20} {:<10} {}", "----", "----", "------");
 
-    let mut resume_handle: u32 = 0;
+        let mut resume_handle: u32 = 0;
 
-    loop {
-        let mut buf: *mut u8 = core::ptr::null_mut();
-        let mut entries_read: u32 = 0;
-        let mut total_entries: u32 = 0;
+        loop {
+            let mut buf: *mut u8 = core::ptr::null_mut();
+            let mut entries_read: u32 = 0;
+            let mut total_entries: u32 = 0;
 
-        let status = NetShareEnum(
-            server_ptr,
-            1,
-            &mut buf,
-            MAX_PREFERRED_LENGTH,
-            &mut entries_read,
-            &mut total_entries,
-            &mut resume_handle,
-        );
+            let status = NetShareEnum(
+                server_ptr,
+                1,
+                &mut buf,
+                MAX_PREFERRED_LENGTH,
+                &mut entries_read,
+                &mut total_entries,
+                &mut resume_handle,
+            );
 
-        if status != NERR_SUCCESS && status != ERROR_MORE_DATA {
-            eprintln!("NetShareEnum (level 1) failed with error: {}", status);
-            break;
-        }
-
-        if !buf.is_null() && entries_read > 0 {
-            let entries =
-                core::slice::from_raw_parts(buf as *const ShareInfo1, entries_read as usize);
-
-            for entry in entries {
-                let name = wide_ptr_to_str(entry.shi1_netname);
-                let stype = share_type_str(entry.shi1_type);
-                let remark = wide_ptr_to_str(entry.shi1_remark);
-
-                println!("  {:<20} {:<10} {}", name, stype, remark);
+            if status != NERR_SUCCESS && status != ERROR_MORE_DATA {
+                eprintln!("NetShareEnum (level 1) failed with error: {}", status);
+                break;
             }
-        }
 
-        if !buf.is_null() {
-            NetApiBufferFree(buf as *mut _);
-        }
+            if !buf.is_null() && entries_read > 0 {
+                let entries =
+                    core::slice::from_raw_parts(buf as *const ShareInfo1, entries_read as usize);
 
-        if status != ERROR_MORE_DATA {
-            break;
+                for entry in entries {
+                    let name = wide_ptr_to_str(entry.shi1_netname);
+                    let stype = share_type_str(entry.shi1_type);
+                    let remark = wide_ptr_to_str(entry.shi1_remark);
+
+                    println!("  {:<20} {:<10} {}", name, stype, remark);
+                }
+            }
+
+            if !buf.is_null() {
+                NetApiBufferFree(buf as *mut _);
+            }
+
+            if status != ERROR_MORE_DATA {
+                break;
+            }
         }
     }
 }

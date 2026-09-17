@@ -53,7 +53,11 @@ fn main(args: *mut u8, len: usize) {
         let mut output: *mut u8 = core::ptr::null_mut();
         let status = NetStatisticsGet(server_ptr, service.as_ptr(), 0, 0, &mut output);
 
-        let display_host = if hostname_str.is_empty() { "localhost" } else { hostname_str };
+        let display_host = if hostname_str.is_empty() {
+            "localhost"
+        } else {
+            hostname_str
+        };
 
         if status == 0 && !output.is_null() {
             let stats = &*(output as *const StatWorkstation0);

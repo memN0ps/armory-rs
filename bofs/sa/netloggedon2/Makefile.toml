@@ -1,4 +1,5 @@
 [env]
+CARGO_TARGET_DIR = "target"
 LIBS = "-lkernel32 -lnetapi32"
 NAME = "netloggedon2"
 OUT_DIR = "out"

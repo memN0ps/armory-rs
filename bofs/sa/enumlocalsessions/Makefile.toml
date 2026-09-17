@@ -1,4 +1,5 @@
 [env]
+CARGO_TARGET_DIR = "target"
 LIBS = "-lkernel32 -lwtsapi32"
 NAME = "enumlocalsessions"
 OUT_DIR = "out"

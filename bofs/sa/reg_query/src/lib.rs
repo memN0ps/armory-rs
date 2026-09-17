@@ -20,7 +20,6 @@ use alloc::{string::String, vec};
 use core::ffi::CStr;
 use rustbof::data::DataParser;
 use rustbof::{eprintln, println};
-use windows_sys::Win32::Foundation::GetLastError;
 use windows_sys::Win32::System::Registry::*;
 
 const HKEY_CLASSES_ROOT: isize = 0x80000000u32 as isize;
@@ -68,52 +67,70 @@ fn hive_from_id(id: i32) -> Option<isize> {
 }
 
 unsafe fn print_value(name: &str, value_type: u32, data: &[u8]) {
-    match value_type {
-        REG_SZ | REG_EXPAND_SZ => {
-            if data.is_empty() {
-                println!("\t{} ({}) : (empty)", name, reg_type_str(value_type));
-            } else {
-                let s = CStr::from_ptr(data.as_ptr() as *const i8)
-                    .to_str()
-                    .unwrap_or("(invalid)");
-                println!("\t{} ({}) : {}", name, reg_type_str(value_type), s);
-            }
-        }
-        REG_DWORD => {
-            if data.len() >= 4 {
-                let val = u32::from_le_bytes([data[0], data[1], data[2], data[3]]);
-                println!("\t{} ({}) : 0x{:X} ({})", name, reg_type_str(value_type), val, val);
-            } else {
-                println!("\t{} ({}) : (invalid size)", name, reg_type_str(value_type));
-            }
-        }
-        REG_QWORD => {
-            if data.len() >= 8 {
-                let val = u64::from_le_bytes([
-                    data[0], data[1], data[2], data[3],
-                    data[4], data[5], data[6], data[7],
-                ]);
-                println!("\t{} ({}) : 0x{:X} ({})", name, reg_type_str(value_type), val, val);
-            } else {
-                println!("\t{} ({}) : (invalid size)", name, reg_type_str(value_type));
-            }
-        }
-        REG_MULTI_SZ => {
-            println!("\t{} ({}) :", name, reg_type_str(value_type));
-            let mut offset = 0;
-            while offset < data.len() {
-                let s = CStr::from_ptr(data[offset..].as_ptr() as *const i8);
-                let bytes = s.to_bytes();
-                if bytes.is_empty() {
-                    break;
+    unsafe {
+        match value_type {
+            REG_SZ | REG_EXPAND_SZ => {
+                if data.is_empty() {
+                    println!("\t{} ({}) : (empty)", name, reg_type_str(value_type));
+                } else {
+                    let s = CStr::from_ptr(data.as_ptr() as *const i8)
+                        .to_str()
+                        .unwrap_or("(invalid)");
+                    println!("\t{} ({}) : {}", name, reg_type_str(value_type), s);
                 }
-                let val = s.to_str().unwrap_or("(invalid)");
-                println!("\t\t{}", val);
-                offset += bytes.len() + 1;
             }
-        }
-        REG_BINARY | _ => {
-            println!("\t{} ({}) : ({} bytes)", name, reg_type_str(value_type), data.len());
+            REG_DWORD => {
+                if data.len() >= 4 {
+                    let val = u32::from_le_bytes([data[0], data[1], data[2], data[3]]);
+                    println!(
+                        "\t{} ({}) : 0x{:X} ({})",
+                        name,
+                        reg_type_str(value_type),
+                        val,
+                        val
+                    );
+                } else {
+                    println!("\t{} ({}) : (invalid size)", name, reg_type_str(value_type));
+                }
+            }
+            REG_QWORD => {
+                if data.len() >= 8 {
+                    let val = u64::from_le_bytes([
+                        data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7],
+                    ]);
+                    println!(
+                        "\t{} ({}) : 0x{:X} ({})",
+                        name,
+                        reg_type_str(value_type),
+                        val,
+                        val
+                    );
+                } else {
+                    println!("\t{} ({}) : (invalid size)", name, reg_type_str(value_type));
+                }
+            }
+            REG_MULTI_SZ => {
+                println!("\t{} ({}) :", name, reg_type_str(value_type));
+                let mut offset = 0;
+                while offset < data.len() {
+                    let s = CStr::from_ptr(data[offset..].as_ptr() as *const i8);
+                    let bytes = s.to_bytes();
+                    if bytes.is_empty() {
+                        break;
+                    }
+                    let val = s.to_str().unwrap_or("(invalid)");
+                    println!("\t\t{}", val);
+                    offset += bytes.len() + 1;
+                }
+            }
+            REG_BINARY | _ => {
+                println!(
+                    "\t{} ({}) : ({} bytes)",
+                    name,
+                    reg_type_str(value_type),
+                    data.len()
+                );
+            }
         }
     }
 }
@@ -130,7 +147,10 @@ fn main(args: *mut u8, len: usize) {
     let hive = match hive_from_id(hive_id) {
         Some(h) => h,
         None => {
-            eprintln!("Invalid hive ID: {} (use 0=HKCR, 1=HKCU, 2=HKLM, 3=HKU)", hive_id);
+            eprintln!(
+                "Invalid hive ID: {} (use 0=HKCR, 1=HKCU, 2=HKLM, 3=HKU)",
+                hive_id
+            );
             return;
         }
     };
@@ -197,7 +217,10 @@ fn main(args: *mut u8, len: usize) {
                 &mut data_size,
             );
             if ret != 0 {
-                eprintln!("RegQueryValueExA failed to get size for '{}': 0x{:X}", key_name, ret);
+                eprintln!(
+                    "RegQueryValueExA failed to get size for '{}': 0x{:X}",
+                    key_name, ret
+                );
                 RegCloseKey(hkey as HKEY);
                 if !hostname.is_empty() {
                     RegCloseKey(root_key as HKEY);

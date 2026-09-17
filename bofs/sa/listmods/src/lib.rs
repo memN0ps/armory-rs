@@ -1,12 +1,14 @@
-//! List Loaded Modules BOF
+//! # Loaded Modules BOF
 //!
 //! Enumerates all loaded modules (DLLs) in a target process using
 //! EnumProcessModulesEx and GetModuleFileNameExA. If PID 0 is specified,
 //! the current process is used.
 //!
-//! ## MITRE ATT&CK
+//! ## Arguments
+//! - `int`: Process identifier. Use `0` for the current process.
 //!
-//! T1057 - Process Discovery
+//! ## MITRE ATT&CK
+//! - T1057 - Process Discovery
 
 #![no_std]
 
@@ -49,7 +51,8 @@ fn main(args: *mut u8, len: usize) {
             return;
         }
 
-        let mut modules: [*mut core::ffi::c_void; MAX_MODULES] = [core::ptr::null_mut(); MAX_MODULES];
+        let mut modules: [*mut core::ffi::c_void; MAX_MODULES] =
+            [core::ptr::null_mut(); MAX_MODULES];
         let mut needed: u32 = 0;
 
         let success = EnumProcessModulesEx(

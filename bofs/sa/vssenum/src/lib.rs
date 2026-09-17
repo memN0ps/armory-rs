@@ -15,7 +15,6 @@
 
 use alloc::format;
 use alloc::string::String;
-use alloc::vec::Vec;
 use rustbof::println;
 const GENERIC_READ: u32 = 0x80000000;
 const FILE_SHARE_READ: u32 = 0x00000001;
@@ -71,32 +70,19 @@ unsafe extern "system" {
 
     fn CloseHandle(handle: isize) -> i32;
 
-    fn FindFirstFileA(
-        file_name: *const u8,
-        find_data: *mut Win32FindDataA,
-    ) -> isize;
+    fn FindFirstFileA(file_name: *const u8, find_data: *mut Win32FindDataA) -> isize;
 
-    fn FindNextFileA(
-        find_handle: isize,
-        find_data: *mut Win32FindDataA,
-    ) -> i32;
+    fn FindNextFileA(find_handle: isize, find_data: *mut Win32FindDataA) -> i32;
 
     fn FindClose(find_handle: isize) -> i32;
 }
-fn to_cstr_bytes(s: &str) -> Vec<u8> {
-    let mut v = Vec::with_capacity(s.len() + 1);
-    v.extend_from_slice(s.as_bytes());
-    v.push(0);
-    v
-}
-
 fn cstr_from_buf(buf: &[u8]) -> &str {
     let len = buf.iter().position(|&b| b == 0).unwrap_or(buf.len());
     core::str::from_utf8(&buf[..len]).unwrap_or("(invalid)")
 }
 
 fn filetime_to_date(ft: [u32; 2]) -> String {
-    let ticks = (ft[1] as u64) << 32 | ft[0] as u64;
+    let ticks = ((ft[1] as u64) << 32) | ft[0] as u64;
     if ticks == 0 {
         return String::from("(unknown)");
     }
@@ -135,7 +121,16 @@ fn filetime_to_date(ft: [u32; 2]) -> String {
     let month_days: [u64; 12] = [
         31,
         if leap { 29 } else { 28 },
-        31, 30, 31, 30, 31, 31, 30, 31, 30, 31,
+        31,
+        30,
+        31,
+        30,
+        31,
+        31,
+        30,
+        31,
+        30,
+        31,
     ];
 
     let mut m = 0u64;
@@ -168,10 +163,7 @@ fn main() {
 
     unsafe {
         for i in 1..=MAX_SHADOW_COPIES {
-            let path = format!(
-                "\\\\?\\GLOBALROOT\\Device\\HarddiskVolumeShadowCopy{}\0",
-                i
-            );
+            let path = format!("\\\\?\\GLOBALROOT\\Device\\HarddiskVolumeShadowCopy{}\0", i);
 
             let handle = CreateFileA(
                 path.as_ptr(),
@@ -199,10 +191,7 @@ fn main() {
                     "    Created:       {}",
                     filetime_to_date(info.creation_time)
                 );
-                println!(
-                    "    Volume Serial: 0x{:08X}",
-                    info.volume_serial_number
-                );
+                println!("    Volume Serial: 0x{:08X}", info.volume_serial_number);
             }
 
             let search_path = format!(
@@ -241,10 +230,7 @@ fn main() {
                 println!("    Root Contents: (access denied or empty)");
             }
 
-            let device_path = format!(
-                "\\\\?\\GLOBALROOT\\Device\\HarddiskVolumeShadowCopy{}",
-                i
-            );
+            let device_path = format!("\\\\?\\GLOBALROOT\\Device\\HarddiskVolumeShadowCopy{}", i);
             println!("    Device Path:   {}", device_path);
             println!();
 
@@ -254,7 +240,10 @@ fn main() {
 
     if found_count == 0 {
         println!("  No volume shadow copies found.");
-        println!("  (Probed HarddiskVolumeShadowCopy1 through HarddiskVolumeShadowCopy{})", MAX_SHADOW_COPIES);
+        println!(
+            "  (Probed HarddiskVolumeShadowCopy1 through HarddiskVolumeShadowCopy{})",
+            MAX_SHADOW_COPIES
+        );
     } else {
         println!("Total shadow copies found: {}", found_count);
     }

@@ -22,14 +22,22 @@ unsafe extern "system" {
     fn GetProcAddress(module: *mut core::ffi::c_void, name: *const u8) -> *mut core::ffi::c_void;
     fn FreeLibrary(module: *mut core::ffi::c_void) -> i32;
 }
-type CAEnumFirstCA =
-    unsafe extern "system" fn(scope: *const u16, flags: u32, ca_info: *mut *mut core::ffi::c_void) -> i32;
-type CAEnumNextCA =
-    unsafe extern "system" fn(prev: *mut core::ffi::c_void, ca_info: *mut *mut core::ffi::c_void) -> i32;
+type CAEnumFirstCA = unsafe extern "system" fn(
+    scope: *const u16,
+    flags: u32,
+    ca_info: *mut *mut core::ffi::c_void,
+) -> i32;
+type CAEnumNextCA = unsafe extern "system" fn(
+    prev: *mut core::ffi::c_void,
+    ca_info: *mut *mut core::ffi::c_void,
+) -> i32;
 type CACloseCA = unsafe extern "system" fn(ca: *mut core::ffi::c_void) -> i32;
 type CACountCAs = unsafe extern "system" fn(ca_info: *mut core::ffi::c_void) -> u32;
-type CAGetCAProperty =
-    unsafe extern "system" fn(ca: *mut core::ffi::c_void, prop: *const u16, val: *mut *mut *mut u16) -> i32;
+type CAGetCAProperty = unsafe extern "system" fn(
+    ca: *mut core::ffi::c_void,
+    prop: *const u16,
+    val: *mut *mut *mut u16,
+) -> i32;
 type CAFreeCAProperty =
     unsafe extern "system" fn(ca: *mut core::ffi::c_void, val: *mut *mut u16) -> i32;
 
@@ -101,11 +109,7 @@ fn wide_ptr_to_string(ptr: *mut u16) -> String {
 
 unsafe fn resolve(module: *mut core::ffi::c_void, name: &[u8]) -> Option<*mut core::ffi::c_void> {
     let ptr = unsafe { GetProcAddress(module, name.as_ptr()) };
-    if ptr.is_null() {
-        None
-    } else {
-        Some(ptr)
-    }
+    if ptr.is_null() { None } else { Some(ptr) }
 }
 
 unsafe fn load_certcli_api(module: *mut core::ffi::c_void) -> Option<CertCliApi> {
@@ -117,23 +121,25 @@ unsafe fn load_certcli_api(module: *mut core::ffi::c_void) -> Option<CertCliApi>
             ca_count_cas: core::mem::transmute(resolve(module, b"CACountCAs\0")?),
             ca_get_ca_property: core::mem::transmute(resolve(module, b"CAGetCAProperty\0")?),
             ca_free_ca_property: core::mem::transmute(resolve(module, b"CAFreeCAProperty\0")?),
-            ca_enum_cert_types_for_ca: core::mem::transmute(
-                resolve(module, b"CAEnumCertTypesForCA\0")?,
-            ),
-            ca_enum_next_cert_type: core::mem::transmute(
-                resolve(module, b"CAEnumNextCertType\0")?,
-            ),
+            ca_enum_cert_types_for_ca: core::mem::transmute(resolve(
+                module,
+                b"CAEnumCertTypesForCA\0",
+            )?),
+            ca_enum_next_cert_type: core::mem::transmute(resolve(module, b"CAEnumNextCertType\0")?),
             ca_close_cert_type: core::mem::transmute(resolve(module, b"CACloseCertType\0")?),
             ca_count_cert_types: core::mem::transmute(resolve(module, b"CACountCertTypes\0")?),
-            ca_get_cert_type_property: core::mem::transmute(
-                resolve(module, b"CAGetCertTypeProperty\0")?,
-            ),
-            ca_free_cert_type_property: core::mem::transmute(
-                resolve(module, b"CAFreeCertTypeProperty\0")?,
-            ),
-            ca_get_cert_type_flags_ex: core::mem::transmute(
-                resolve(module, b"CAGetCertTypeFlagsEx\0")?,
-            ),
+            ca_get_cert_type_property: core::mem::transmute(resolve(
+                module,
+                b"CAGetCertTypeProperty\0",
+            )?),
+            ca_free_cert_type_property: core::mem::transmute(resolve(
+                module,
+                b"CAFreeCertTypeProperty\0",
+            )?),
+            ca_get_cert_type_flags_ex: core::mem::transmute(resolve(
+                module,
+                b"CAGetCertTypeFlagsEx\0",
+            )?),
         })
     }
 }
@@ -318,11 +324,7 @@ fn main() {
             ca_idx += 1;
 
             let mut cn_val: *mut *mut u16 = core::ptr::null_mut();
-            let ca_cn = if (api.ca_get_ca_property)(
-                current_ca,
-                prop_cn.as_ptr(),
-                &mut cn_val,
-            ) == 0
+            let ca_cn = if (api.ca_get_ca_property)(current_ca, prop_cn.as_ptr(), &mut cn_val) == 0
             {
                 let s = read_first_multistring(cn_val);
                 (api.ca_free_ca_property)(current_ca, cn_val);
@@ -332,11 +334,7 @@ fn main() {
             };
 
             let mut dn_val: *mut *mut u16 = core::ptr::null_mut();
-            let ca_dn = if (api.ca_get_ca_property)(
-                current_ca,
-                prop_dn.as_ptr(),
-                &mut dn_val,
-            ) == 0
+            let ca_dn = if (api.ca_get_ca_property)(current_ca, prop_dn.as_ptr(), &mut dn_val) == 0
             {
                 let s = read_first_multistring(dn_val);
                 (api.ca_free_ca_property)(current_ca, dn_val);
@@ -346,18 +344,14 @@ fn main() {
             };
 
             let mut dns_val: *mut *mut u16 = core::ptr::null_mut();
-            let ca_dns = if (api.ca_get_ca_property)(
-                current_ca,
-                prop_dns.as_ptr(),
-                &mut dns_val,
-            ) == 0
-            {
-                let s = read_first_multistring(dns_val);
-                (api.ca_free_ca_property)(current_ca, dns_val);
-                s
-            } else {
-                String::from("(unknown)")
-            };
+            let ca_dns =
+                if (api.ca_get_ca_property)(current_ca, prop_dns.as_ptr(), &mut dns_val) == 0 {
+                    let s = read_first_multistring(dns_val);
+                    (api.ca_free_ca_property)(current_ca, dns_val);
+                    s
+                } else {
+                    String::from("(unknown)")
+                };
 
             println!("[CA {}] {}", ca_idx, ca_cn);
             println!("  DN:        {}", ca_dn);

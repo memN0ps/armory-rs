@@ -89,12 +89,7 @@ fn main(args: *mut u8, len: usize) {
 
         let mut buf: *mut u8 = core::ptr::null_mut();
 
-        let status = NetUserGetInfo(
-            server_ptr,
-            username_wide.as_ptr(),
-            2,
-            &mut buf,
-        );
+        let status = NetUserGetInfo(server_ptr, username_wide.as_ptr(), 2, &mut buf);
 
         if status != NERR_SUCCESS {
             eprintln!("NetUserGetInfo failed with error: {}", status);

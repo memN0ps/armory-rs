@@ -74,13 +74,15 @@ fn main(args: *mut u8, len: usize) {
     println!(
         "Enabling user '{}' on '{}'...",
         username,
-        if hostname.is_empty() { "localhost" } else { &hostname }
+        if hostname.is_empty() {
+            "localhost"
+        } else {
+            &hostname
+        }
     );
 
     let mut buf: *mut u8 = core::ptr::null_mut();
-    let status = unsafe {
-        NetUserGetInfo(server_ptr, user_wide.as_ptr(), 1, &mut buf)
-    };
+    let status = unsafe { NetUserGetInfo(server_ptr, user_wide.as_ptr(), 1, &mut buf) };
 
     if status != 0 {
         eprintln!("NetUserGetInfo failed: {}", status);

@@ -1,8 +1,18 @@
+//! # System Resources BOF
+//!
+//! Reports physical-memory use and free and total space for the current drive.
+//!
+//! ## Arguments
+//! - None.
+//!
+//! ## MITRE ATT&CK
+//! - T1082 - System Information Discovery
+
 #![no_std]
 
 use rustbof::{eprintln, println};
-use windows_sys::Win32::System::SystemInformation::{GlobalMemoryStatusEx, MEMORYSTATUSEX};
 use windows_sys::Win32::Storage::FileSystem::GetDiskFreeSpaceExA;
+use windows_sys::Win32::System::SystemInformation::{GlobalMemoryStatusEx, MEMORYSTATUSEX};
 
 const DIV: u64 = 1_048_576;
 
@@ -22,9 +32,12 @@ fn main() {
         let mut total_bytes: u64 = 0;
         let mut free_bytes: u64 = 0;
         if GetDiskFreeSpaceExA(
-            core::ptr::null(), core::ptr::null_mut(),
-            &mut total_bytes, &mut free_bytes,
-        ) == 0 {
+            core::ptr::null(),
+            core::ptr::null_mut(),
+            &mut total_bytes,
+            &mut free_bytes,
+        ) == 0
+        {
             eprintln!("Error fetching disk space");
             return;
         }

@@ -107,8 +107,7 @@ fn load_api() -> Option<CryptApi> {
 
         let cd_locate = GetProcAddress(cryptdll, b"CDLocateCSystem\0".as_ptr());
         let rtl_init_ansi = GetProcAddress(ntdll, b"RtlInitAnsiString\0".as_ptr());
-        let rtl_ansi_to_unicode =
-            GetProcAddress(ntdll, b"RtlAnsiStringToUnicodeString\0".as_ptr());
+        let rtl_ansi_to_unicode = GetProcAddress(ntdll, b"RtlAnsiStringToUnicodeString\0".as_ptr());
         let rtl_free_unicode = GetProcAddress(ntdll, b"RtlFreeUnicodeString\0".as_ptr());
 
         if cd_locate.is_null()
@@ -139,11 +138,7 @@ fn str_to_unicode(api: &CryptApi, s: &str) -> Option<UnicodeString> {
 
         let mut unicode = core::mem::zeroed::<UnicodeString>();
         let status = (api.rtl_ansi_to_unicode)(&mut unicode, &ansi, 1);
-        if status >= 0 {
-            Some(unicode)
-        } else {
-            None
-        }
+        if status >= 0 { Some(unicode) } else { None }
     }
 }
 
@@ -152,8 +147,16 @@ fn bytes_to_hex(bytes: &[u8]) -> String {
     for &b in bytes {
         let hi = (b >> 4) & 0xf;
         let lo = b & 0xf;
-        hex.push(if hi < 10 { (b'0' + hi) as char } else { (b'a' + hi - 10) as char });
-        hex.push(if lo < 10 { (b'0' + lo) as char } else { (b'a' + lo - 10) as char });
+        hex.push(if hi < 10 {
+            (b'0' + hi) as char
+        } else {
+            (b'a' + hi - 10) as char
+        });
+        hex.push(if lo < 10 {
+            (b'0' + lo) as char
+        } else {
+            (b'a' + lo - 10) as char
+        });
     }
     hex
 }
@@ -172,17 +175,12 @@ fn get_key(api: &CryptApi, etype: i32, password: &str, salt_str: &str) -> Option
         let mut pw_unicode = str_to_unicode(api, password)?;
         let mut salt_unicode = str_to_unicode(api, salt_str)?;
 
-        let result =
-            ((*csystem).hash_password)(&pw_unicode, &salt_unicode, 4096, key.as_mut_ptr());
+        let result = ((*csystem).hash_password)(&pw_unicode, &salt_unicode, 4096, key.as_mut_ptr());
 
         (api.rtl_free_unicode_string)(&mut pw_unicode);
         (api.rtl_free_unicode_string)(&mut salt_unicode);
 
-        if result >= 0 {
-            Some(key)
-        } else {
-            None
-        }
+        if result >= 0 { Some(key) } else { None }
     }
 }
 

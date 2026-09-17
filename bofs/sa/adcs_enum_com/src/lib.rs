@@ -33,17 +33,17 @@ const S_FALSE: i32 = 1;
 
 const CLSID_CCERTCONFIG: [u8; 16] = [
     0x38, 0xCE, 0x2F, 0x37, // Data1: 372FCE38 (LE)
-    0x24, 0x43,             // Data2: 4324 (LE)
-    0xD0, 0x11,             // Data3: 11D0 (LE)
-    0x88, 0x10,             // Data4[0..2]
+    0x24, 0x43, // Data2: 4324 (LE)
+    0xD0, 0x11, // Data3: 11D0 (LE)
+    0x88, 0x10, // Data4[0..2]
     0x00, 0xA0, 0xC9, 0x03, 0xB8, 0x3C, // Data4[2..8]
 ];
 
 const IID_ICERTCONFIG2: [u8; 16] = [
     0xDE, 0xED, 0x18, 0x7A, // Data1: 7A18EDDE (LE)
-    0x78, 0x7E,             // Data2: 7E78 (LE)
-    0x63, 0x41,             // Data3: 4163 (LE)
-    0x8D, 0xED,             // Data4[0..2]
+    0x78, 0x7E, // Data2: 7E78 (LE)
+    0x63, 0x41, // Data3: 4163 (LE)
+    0x8D, 0xED, // Data4[0..2]
     0x78, 0xE2, 0xC9, 0xCE, 0xE9, 0x24, // Data4[2..8]
 ];
 #[repr(C)]
@@ -52,15 +52,9 @@ struct ICertConfig2Vtbl {
     add_ref: *const core::ffi::c_void,
     release: unsafe extern "system" fn(this: *mut core::ffi::c_void) -> u32,
     _dispatch: [*const core::ffi::c_void; 4],
-    reset: unsafe extern "system" fn(
-        this: *mut core::ffi::c_void,
-        index: i32,
-        count: *mut i32,
-    ) -> i32,
-    next: unsafe extern "system" fn(
-        this: *mut core::ffi::c_void,
-        index: *mut i32,
-    ) -> i32,
+    reset:
+        unsafe extern "system" fn(this: *mut core::ffi::c_void, index: i32, count: *mut i32) -> i32,
+    next: unsafe extern "system" fn(this: *mut core::ffi::c_void, index: *mut i32) -> i32,
     get_field: unsafe extern "system" fn(
         this: *mut core::ffi::c_void,
         field: *const u16,

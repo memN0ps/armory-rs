@@ -21,8 +21,8 @@ use windows_sys::Win32::Security::SECURITY_ATTRIBUTES;
 use windows_sys::Win32::Storage::FileSystem::ReadFile;
 use windows_sys::Win32::System::Pipes::CreatePipe;
 use windows_sys::Win32::System::Threading::{
-    CreateProcessA, WaitForSingleObject, PROCESS_INFORMATION, STARTUPINFOA, CREATE_NO_WINDOW,
-    STARTF_USESTDHANDLES,
+    CREATE_NO_WINDOW, CreateProcessA, PROCESS_INFORMATION, STARTF_USESTDHANDLES, STARTUPINFOA,
+    WaitForSingleObject,
 };
 
 fn run_command(cmd: &str) {
@@ -68,7 +68,13 @@ fn run_command(cmd: &str) {
             let mut buf = [0u8; 4096];
             loop {
                 let mut read: u32 = 0;
-                if ReadFile(h_read, buf.as_mut_ptr(), 4096, &mut read, core::ptr::null_mut()) == 0
+                if ReadFile(
+                    h_read,
+                    buf.as_mut_ptr(),
+                    4096,
+                    &mut read,
+                    core::ptr::null_mut(),
+                ) == 0
                     || read == 0
                 {
                     break;

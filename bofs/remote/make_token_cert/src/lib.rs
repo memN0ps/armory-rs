@@ -20,9 +20,6 @@ use rustbof::data::DataParser;
 use rustbof::{eprintln, println};
 const CRYPT_USER_KEYSET: u32 = 0x00001000;
 const PKCS12_ALLOW_OVERWRITE_KEY: u32 = 0x00004000;
-const X509_ASN_ENCODING: u32 = 0x00000001;
-const PKCS_7_ASN_ENCODING: u32 = 0x00010000;
-const CERT_ENCODING: u32 = X509_ASN_ENCODING | PKCS_7_ASN_ENCODING;
 const CERT_NAME_SIMPLE_DISPLAY_TYPE: u32 = 4;
 const CERT_NAME_ISSUER_FLAG: u32 = 0x1;
 
@@ -69,12 +66,7 @@ unsafe extern "system" {
         data_size: *mut u32,
     ) -> i32;
 
-    fn CertFreeCertificateContext(cert_context: *const CertContext) -> i32;
-
-    fn CertCloseStore(
-        store: *mut core::ffi::c_void,
-        flags: u32,
-    ) -> i32;
+    fn CertCloseStore(store: *mut core::ffi::c_void, flags: u32) -> i32;
 }
 fn to_wide(s: &str) -> Vec<u16> {
     let mut v: Vec<u16> = s.encode_utf16().collect();
@@ -109,7 +101,7 @@ fn main(args: *mut u8, len: usize) {
     println!("PFX data size: {} bytes", pfx_data.len());
 
     unsafe {
-        let mut pfx_blob = CryptDataBlob {
+        let pfx_blob = CryptDataBlob {
             cb_data: pfx_data.len() as u32,
             pb_data: pfx_data.as_ptr() as *mut u8,
         };
@@ -152,8 +144,8 @@ fn main(args: *mut u8, len: usize) {
             );
 
             if name_len > 1 {
-                let name = core::str::from_utf8(&name_buf[..name_len as usize - 1])
-                    .unwrap_or("(invalid)");
+                let name =
+                    core::str::from_utf8(&name_buf[..name_len as usize - 1]).unwrap_or("(invalid)");
                 println!("    Subject:    {}", name);
             }
 

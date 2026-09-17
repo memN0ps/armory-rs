@@ -72,16 +72,16 @@ fn main() {
             return;
         }
 
-        let get_join_info_ptr =
-            GetProcAddress(netapi, b"NetGetAadJoinInformation\0".as_ptr());
+        let get_join_info_ptr = GetProcAddress(netapi, b"NetGetAadJoinInformation\0".as_ptr());
         if get_join_info_ptr.is_null() {
-            eprintln!("Failed to resolve NetGetAadJoinInformation - function not available on this OS.");
+            eprintln!(
+                "Failed to resolve NetGetAadJoinInformation - function not available on this OS."
+            );
             FreeLibrary(netapi);
             return;
         }
 
-        let free_join_info_ptr =
-            GetProcAddress(netapi, b"NetFreeAadJoinInformation\0".as_ptr());
+        let free_join_info_ptr = GetProcAddress(netapi, b"NetFreeAadJoinInformation\0".as_ptr());
         if free_join_info_ptr.is_null() {
             eprintln!("Failed to resolve NetFreeAadJoinInformation.");
             FreeLibrary(netapi);
@@ -116,7 +116,10 @@ fn main() {
         println!("  Tenant ID:        {}", wide_ptr_to_string(i.tenant_id));
         println!("  Email:            {}", wide_ptr_to_string(i.email));
         println!("  Display Name:     {}", wide_ptr_to_string(i.display_name));
-        println!("  MDM Enroll URL:   {}", wide_ptr_to_string(i.mdm_enrollment_url));
+        println!(
+            "  MDM Enroll URL:   {}",
+            wide_ptr_to_string(i.mdm_enrollment_url)
+        );
 
         net_free_aad_join_info(info);
         FreeLibrary(netapi);

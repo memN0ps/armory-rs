@@ -22,15 +22,15 @@ use windows_sys::Win32::System::Services::*;
 
 #[repr(C)]
 struct QueryServiceConfigA {
-    dwServiceType: u32,
-    dwStartType: u32,
-    dwErrorControl: u32,
-    lpBinaryPathName: *const u8,
-    lpLoadOrderGroup: *const u8,
-    dwTagId: u32,
-    lpDependencies: *const u8,
-    lpServiceStartName: *const u8,
-    lpDisplayName: *const u8,
+    dw_service_type: u32,
+    dw_start_type: u32,
+    dw_error_control: u32,
+    lp_binary_path_name: *const u8,
+    lp_load_order_group: *const u8,
+    dw_tag_id: u32,
+    lp_dependencies: *const u8,
+    lp_service_start_name: *const u8,
+    lp_display_name: *const u8,
 }
 
 fn service_type_str(t: u32) -> &'static str {
@@ -71,12 +71,14 @@ fn error_control_str(e: u32) -> &'static str {
 }
 
 unsafe fn read_cstr(ptr: *const u8) -> &'static str {
-    if ptr.is_null() {
-        "(null)"
-    } else {
-        CStr::from_ptr(ptr as *const i8)
-            .to_str()
-            .unwrap_or("(invalid)")
+    unsafe {
+        if ptr.is_null() {
+            "(null)"
+        } else {
+            CStr::from_ptr(ptr as *const i8)
+                .to_str()
+                .unwrap_or("(invalid)")
+        }
     }
 }
 
@@ -129,7 +131,10 @@ fn main(args: *mut u8, len: usize) {
         );
 
         if needed == 0 {
-            eprintln!("QueryServiceConfigA failed to return size: 0x{:X}", GetLastError());
+            eprintln!(
+                "QueryServiceConfigA failed to return size: 0x{:X}",
+                GetLastError()
+            );
             CloseServiceHandle(sc_service);
             CloseServiceHandle(sc_manager);
             return;
@@ -152,15 +157,50 @@ fn main(args: *mut u8, len: usize) {
         let config = &*(buf.as_ptr() as *const QueryServiceConfigA);
 
         println!("SERVICE_NAME: {}", service_name);
-        println!("\t{:<20} : {} {}", "TYPE", config.dwServiceType, service_type_str(config.dwServiceType));
-        println!("\t{:<20} : {} {}", "START_TYPE", config.dwStartType, start_type_str(config.dwStartType));
-        println!("\t{:<20} : {} {}", "ERROR_CONTROL", config.dwErrorControl, error_control_str(config.dwErrorControl));
-        println!("\t{:<20} : {}", "BINARY_PATH_NAME", read_cstr(config.lpBinaryPathName));
-        println!("\t{:<20} : {}", "LOAD_ORDER_GROUP", read_cstr(config.lpLoadOrderGroup));
-        println!("\t{:<20} : {}", "TAG", config.dwTagId);
-        println!("\t{:<20} : {}", "DISPLAY_NAME", read_cstr(config.lpDisplayName));
-        println!("\t{:<20} : {}", "DEPENDENCIES", read_cstr(config.lpDependencies));
-        println!("\t{:<20} : {}", "SERVICE_START_NAME", read_cstr(config.lpServiceStartName));
+        println!(
+            "\t{:<20} : {} {}",
+            "TYPE",
+            config.dw_service_type,
+            service_type_str(config.dw_service_type)
+        );
+        println!(
+            "\t{:<20} : {} {}",
+            "START_TYPE",
+            config.dw_start_type,
+            start_type_str(config.dw_start_type)
+        );
+        println!(
+            "\t{:<20} : {} {}",
+            "ERROR_CONTROL",
+            config.dw_error_control,
+            error_control_str(config.dw_error_control)
+        );
+        println!(
+            "\t{:<20} : {}",
+            "BINARY_PATH_NAME",
+            read_cstr(config.lp_binary_path_name)
+        );
+        println!(
+            "\t{:<20} : {}",
+            "LOAD_ORDER_GROUP",
+            read_cstr(config.lp_load_order_group)
+        );
+        println!("\t{:<20} : {}", "TAG", config.dw_tag_id);
+        println!(
+            "\t{:<20} : {}",
+            "DISPLAY_NAME",
+            read_cstr(config.lp_display_name)
+        );
+        println!(
+            "\t{:<20} : {}",
+            "DEPENDENCIES",
+            read_cstr(config.lp_dependencies)
+        );
+        println!(
+            "\t{:<20} : {}",
+            "SERVICE_START_NAME",
+            read_cstr(config.lp_service_start_name)
+        );
 
         CloseServiceHandle(sc_service);
         CloseServiceHandle(sc_manager);

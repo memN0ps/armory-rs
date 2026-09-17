@@ -94,25 +94,15 @@ fn main(args: *mut u8, len: usize) {
         };
 
         if status == STATUS_SUCCESS {
-            println!("Successfully {}ed process {}.", action.to_ascii_lowercase(), pid);
+            let result = if option == 1 { "suspended" } else { "resumed" };
+            println!("Successfully {} process {}.", result, pid);
         } else {
-            eprintln!("Nt{}Process failed with NTSTATUS: 0x{:08X}", action, status as u32);
+            eprintln!(
+                "Nt{}Process failed with NTSTATUS: 0x{:08X}",
+                action, status as u32
+            );
         }
 
         CloseHandle(handle);
-    }
-}
-
-trait AsciiLower {
-    fn to_ascii_lowercase(&self) -> &str;
-}
-
-impl AsciiLower for str {
-    fn to_ascii_lowercase(&self) -> &str {
-        if self.as_bytes()[0] == b'S' {
-            "suspend"
-        } else {
-            "resume"
-        }
     }
 }

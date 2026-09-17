@@ -89,10 +89,7 @@ fn main(args: *mut u8, len: usize) {
         let info = &*(buffer.as_ptr() as *const SystemHandleInformation);
         let num_handles = info.number_of_handles;
 
-        println!(
-            "{:<12} {:<12} {:<12}",
-            "Handle", "ObjectType", "AccessMask"
-        );
+        println!("{:<12} {:<12} {:<12}", "Handle", "ObjectType", "AccessMask");
         println!("{}", "-".repeat(40));
 
         let handles_ptr = info.handles.as_ptr();

@@ -10,14 +10,13 @@
 
 #![no_std]
 
-use rustbof::{eprintln, println};
-use rustbof::str::from_wide;
+use rustbof::println;
 
 #[repr(C)]
 struct DnsCacheEntry {
     next: *mut DnsCacheEntry,
-    name: *mut u16,    // Wide string DNS name
-    wtype: u16,        // DNS record type
+    name: *mut u16, // Wide string DNS name
+    wtype: u16,     // DNS record type
     data_length: u16,
     flags: u32,
 }

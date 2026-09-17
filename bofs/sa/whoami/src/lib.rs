@@ -1,3 +1,15 @@
+//! # Identity BOF
+//!
+//! Reports the current user, SID, token groups, integrity level, and token
+//! privileges.
+//!
+//! ## Arguments
+//! - None.
+//!
+//! ## MITRE ATT&CK
+//! - T1033 - System Owner/User Discovery
+//! - T1069.001 - Permission Groups Discovery: Local Groups
+
 #![no_std]
 
 use alloc::format;
@@ -7,18 +19,15 @@ use core::ptr::null;
 use rustbof::str::from_wide;
 use rustbof::{eprintln, println};
 use windows_sys::Win32::Foundation::FALSE;
-use windows_sys::Win32::System::SystemServices::SE_GROUP_LOGON_ID;
 use windows_sys::Win32::Security::{
-    LookupAccountSidW, SidTypeAlias, SidTypeGroup, 
-    SidTypeLabel, SidTypeWellKnownGroup,TokenGroups, 
-    TokenPrivileges, SE_PRIVILEGE_ENABLED, TOKEN_GROUPS, 
-    TOKEN_PRIVILEGES,
+    LookupAccountSidW, SE_PRIVILEGE_ENABLED, SidTypeAlias, SidTypeGroup, SidTypeLabel,
+    SidTypeWellKnownGroup, TOKEN_GROUPS, TOKEN_PRIVILEGES, TokenGroups, TokenPrivileges,
 };
+use windows_sys::Win32::System::SystemServices::SE_GROUP_LOGON_ID;
 
 use crate::helpers::{
-    get_token_info, get_username, get_user_sid,
-    sid_type_str, sid_to_string, format_group_attrs,
-    lookup_privilege_name, lookup_privilege_desc
+    format_group_attrs, get_token_info, get_user_sid, get_username, lookup_privilege_desc,
+    lookup_privilege_name, sid_to_string, sid_type_str,
 };
 
 mod helpers;
@@ -66,11 +75,11 @@ fn show_groups() {
 
         let result = unsafe {
             LookupAccountSidW(
-                null(), 
+                null(),
                 group.Sid,
-                name_buffer.as_mut_ptr(), 
+                name_buffer.as_mut_ptr(),
                 &mut name_len,
-                domain_buffer.as_mut_ptr(), 
+                domain_buffer.as_mut_ptr(),
                 &mut domain_len,
                 &mut sid_type,
             )
@@ -91,17 +100,17 @@ fn show_groups() {
 
         let name = from_wide(&name_buffer);
         let domain = from_wide(&domain_buffer);
-        let display = if domain.is_empty() { 
-            name 
-        } else { 
-            format!("{}\\{}", domain, name) 
+        let display = if domain.is_empty() {
+            name
+        } else {
+            format!("{}\\{}", domain, name)
         };
 
         rows.push((
-            display, 
-            sid_type_str(sid_type), 
-            sid_to_string(group.Sid), 
-            format_group_attrs(group.Attributes)
+            display,
+            sid_type_str(sid_type),
+            sid_to_string(group.Sid),
+            format_group_attrs(group.Attributes),
         ));
     }
 
@@ -109,18 +118,62 @@ fn show_groups() {
         return;
     }
 
-    let w1 = rows.iter().map(|r| r.0.chars().count()).max().unwrap_or(0).max(10);
-    let w2 = rows.iter().map(|r| r.1.chars().count()).max().unwrap_or(0).max(4);
-    let w3 = rows.iter().map(|r| r.2.chars().count()).max().unwrap_or(0).max(3);
-    let w4 = rows.iter().map(|r| r.3.chars().count()).max().unwrap_or(0).max(10);
+    let w1 = rows
+        .iter()
+        .map(|r| r.0.chars().count())
+        .max()
+        .unwrap_or(0)
+        .max(10);
+    let w2 = rows
+        .iter()
+        .map(|r| r.1.chars().count())
+        .max()
+        .unwrap_or(0)
+        .max(4);
+    let w3 = rows
+        .iter()
+        .map(|r| r.2.chars().count())
+        .max()
+        .unwrap_or(0)
+        .max(3);
+    let w4 = rows
+        .iter()
+        .map(|r| r.3.chars().count())
+        .max()
+        .unwrap_or(0)
+        .max(10);
 
     println!("\n\nGROUP INFORMATION");
     println!("-----------------\n");
-    println!("{:<w1$} {:<w2$} {:<w3$} {}", "Group Name", "Type", "SID", "Attributes", w1 = w1, w2 = w2, w3 = w3);
-    println!("{} {} {} {}", "=".repeat(w1), "=".repeat(w2), "=".repeat(w3), "=".repeat(w4));
+    println!(
+        "{:<w1$} {:<w2$} {:<w3$} {}",
+        "Group Name",
+        "Type",
+        "SID",
+        "Attributes",
+        w1 = w1,
+        w2 = w2,
+        w3 = w3
+    );
+    println!(
+        "{} {} {} {}",
+        "=".repeat(w1),
+        "=".repeat(w2),
+        "=".repeat(w3),
+        "=".repeat(w4)
+    );
 
     for (name, kind, sid, attrs) in rows {
-        println!("{:<w1$} {:<w2$} {:<w3$} {}", name, kind, sid, attrs, w1 = w1, w2 = w2, w3 = w3);
+        println!(
+            "{:<w1$} {:<w2$} {:<w3$} {}",
+            name,
+            kind,
+            sid,
+            attrs,
+            w1 = w1,
+            w2 = w2,
+            w3 = w3
+        );
     }
 }
 
@@ -139,12 +192,12 @@ fn show_privileges() {
     for privilege in privileges {
         let name = lookup_privilege_name(&privilege.Luid);
         let desc = lookup_privilege_desc(&name);
-        let state = if (privilege.Attributes & SE_PRIVILEGE_ENABLED) != 0 { 
-            "Enabled" 
-        } else { 
-            "Disabled" 
+        let state = if (privilege.Attributes & SE_PRIVILEGE_ENABLED) != 0 {
+            "Enabled"
+        } else {
+            "Disabled"
         };
-        
+
         rows.push((name, desc, state));
     }
 
@@ -152,13 +205,35 @@ fn show_privileges() {
         return;
     }
 
-    let w1 = rows.iter().map(|r| r.0.chars().count()).max().unwrap_or(0).max(14);
-    let w2 = rows.iter().map(|r| r.1.chars().count()).max().unwrap_or(0).max(11);
-    let w3 = rows.iter().map(|r| r.2.chars().count()).max().unwrap_or(0).max(5);
+    let w1 = rows
+        .iter()
+        .map(|r| r.0.chars().count())
+        .max()
+        .unwrap_or(0)
+        .max(14);
+    let w2 = rows
+        .iter()
+        .map(|r| r.1.chars().count())
+        .max()
+        .unwrap_or(0)
+        .max(11);
+    let w3 = rows
+        .iter()
+        .map(|r| r.2.chars().count())
+        .max()
+        .unwrap_or(0)
+        .max(5);
 
     println!("\n\nPRIVILEGES INFORMATION");
     println!("----------------------\n");
-    println!("{:<w1$} {:<w2$} {}", "Privilege Name", "Description", "State", w1 = w1, w2 = w2);
+    println!(
+        "{:<w1$} {:<w2$} {}",
+        "Privilege Name",
+        "Description",
+        "State",
+        w1 = w1,
+        w2 = w2
+    );
     println!("{} {} {}", "=".repeat(w1), "=".repeat(w2), "=".repeat(w3));
 
     for (name, desc, state) in rows {

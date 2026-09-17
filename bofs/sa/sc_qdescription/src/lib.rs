@@ -23,7 +23,7 @@ const SERVICE_CONFIG_DESCRIPTION: u32 = 1;
 
 #[repr(C)]
 struct ServiceDescriptionA {
-    lpDescription: *const u8,
+    lp_description: *const u8,
 }
 
 #[rustbof::main]
@@ -76,7 +76,10 @@ fn main(args: *mut u8, len: usize) {
         );
 
         if needed == 0 {
-            eprintln!("QueryServiceConfig2A failed to return size: 0x{:X}", GetLastError());
+            eprintln!(
+                "QueryServiceConfig2A failed to return size: 0x{:X}",
+                GetLastError()
+            );
             CloseServiceHandle(sc_service);
             CloseServiceHandle(sc_manager);
             return;
@@ -100,10 +103,10 @@ fn main(args: *mut u8, len: usize) {
         let desc = &*(buf.as_ptr() as *const ServiceDescriptionA);
 
         println!("SERVICE_NAME: {}", service_name);
-        if desc.lpDescription.is_null() {
+        if desc.lp_description.is_null() {
             println!("\tDESCRIPTION: (none)");
         } else {
-            let description = CStr::from_ptr(desc.lpDescription as *const i8)
+            let description = CStr::from_ptr(desc.lp_description as *const i8)
                 .to_str()
                 .unwrap_or("(invalid)");
             println!("\tDESCRIPTION: {}", description);

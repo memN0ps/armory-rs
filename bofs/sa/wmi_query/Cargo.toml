@@ -10,12 +10,6 @@ crate-type = ["staticlib"]
 [dependencies.rustbof]
 path = "../../../rustbof/crates/rustbof"
 
-[dependencies.windows-sys]
-version = "0.59"
-features = [
-    "Win32_Foundation",
-]
-
 [profile.release]
 opt-level = "z"
 codegen-units = 1

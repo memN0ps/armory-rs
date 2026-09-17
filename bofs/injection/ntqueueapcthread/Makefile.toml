@@ -1,4 +1,5 @@
 [env]
+CARGO_TARGET_DIR = "target"
 LIBS = "-lkernel32 -lntdll"
 NAME = "ntqueueapcthread"
 OUT_DIR = "out"

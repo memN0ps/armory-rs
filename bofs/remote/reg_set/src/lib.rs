@@ -92,7 +92,7 @@ fn hex_to_bytes(s: &str) -> Option<Vec<u8>> {
 fn parse_u32(s: &str) -> Option<u32> {
     let mut result: u32 = 0;
     for &b in s.as_bytes() {
-        if b < b'0' || b > b'9' {
+        if !b.is_ascii_digit() {
             return None;
         }
         result = result.checked_mul(10)?.checked_add((b - b'0') as u32)?;
@@ -103,7 +103,7 @@ fn parse_u32(s: &str) -> Option<u32> {
 fn parse_u64(s: &str) -> Option<u64> {
     let mut result: u64 = 0;
     for &b in s.as_bytes() {
-        if b < b'0' || b > b'9' {
+        if !b.is_ascii_digit() {
             return None;
         }
         result = result.checked_mul(10)?.checked_add((b - b'0') as u64)?;
@@ -124,7 +124,10 @@ fn main(args: *mut u8, len: usize) {
     let hive = match hive_from_id(hive_id) {
         Some(h) => h,
         None => {
-            eprintln!("Invalid hive ID: {} (use 0=HKCR, 1=HKCU, 2=HKLM, 3=HKU)", hive_id);
+            eprintln!(
+                "Invalid hive ID: {} (use 0=HKCR, 1=HKCU, 2=HKLM, 3=HKU)",
+                hive_id
+            );
             return;
         }
     };
@@ -142,7 +145,10 @@ fn main(args: *mut u8, len: usize) {
     let reg_type = match type_from_str(&type_str) {
         Some(t) => t,
         None => {
-            eprintln!("Invalid type: {} (use REG_SZ, REG_DWORD, REG_EXPAND_SZ, REG_BINARY, REG_QWORD)", type_str);
+            eprintln!(
+                "Invalid type: {} (use REG_SZ, REG_DWORD, REG_EXPAND_SZ, REG_BINARY, REG_QWORD)",
+                type_str
+            );
             return;
         }
     };
@@ -201,16 +207,10 @@ fn main(args: *mut u8, len: usize) {
                 Some(bytes)
             }
             REG_TYPE_DWORD => {
-                match parse_u32(&value_data) {
-                    Some(val) => Some(Vec::from(val.to_le_bytes().as_slice())),
-                    None => None,
-                }
+                parse_u32(&value_data).map(|val| Vec::from(val.to_le_bytes().as_slice()))
             }
             REG_TYPE_QWORD => {
-                match parse_u64(&value_data) {
-                    Some(val) => Some(Vec::from(val.to_le_bytes().as_slice())),
-                    None => None,
-                }
+                parse_u64(&value_data).map(|val| Vec::from(val.to_le_bytes().as_slice()))
             }
             REG_TYPE_BINARY => hex_to_bytes(&value_data),
             _ => None,
@@ -219,7 +219,10 @@ fn main(args: *mut u8, len: usize) {
         let data = match data_result {
             Some(d) => d,
             None => {
-                eprintln!("Failed to parse value '{}' for type {}", value_data, type_str);
+                eprintln!(
+                    "Failed to parse value '{}' for type {}",
+                    value_data, type_str
+                );
                 RegCloseKey(hkey as HKEY);
                 if !hostname.is_empty() {
                     RegCloseKey(root_key as HKEY);
@@ -245,7 +248,11 @@ fn main(args: *mut u8, len: usize) {
                 ret
             );
         } else {
-            let disp_str = if disposition == 1 { "created" } else { "opened" };
+            let disp_str = if disposition == 1 {
+                "created"
+            } else {
+                "opened"
+            };
             println!(
                 "SUCCESS: Set {} = '{}' ({}) on {}\\{} (key {})",
                 value_name,

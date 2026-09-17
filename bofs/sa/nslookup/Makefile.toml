@@ -1,4 +1,5 @@
 [env]
+CARGO_TARGET_DIR = "target"
 LIBS = "-lkernel32 -ldnsapi -lws2_32"
 NAME = "nslookup"
 OUT_DIR = "out"

@@ -542,14 +542,14 @@ fn walk<A: KernelAdapter>(
             routines += 1;
         }
 
-        if let Some(spec) = target
-            && target_matches(modules, spec, entry)?
-        {
-            if matched.is_some() {
-                return Err(object_error("object-target-not-unique", 13));
-            }
+        if let Some(spec) = target {
+            if target_matches(modules, spec, entry)? {
+                if matched.is_some() {
+                    return Err(object_error("object-target-not-unique", 13));
+                }
 
-            matched = Some(entry);
+                matched = Some(entry);
+            }
         }
 
         for value in [

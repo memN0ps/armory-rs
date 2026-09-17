@@ -18,7 +18,7 @@
 
 use rustbof::data::DataParser;
 use rustbof::{eprintln, println};
-use windows_sys::Win32::Foundation::{CloseHandle, GetLastError, FALSE};
+use windows_sys::Win32::Foundation::{CloseHandle, FALSE, GetLastError};
 use windows_sys::Win32::System::Threading::{GetCurrentProcess, OpenProcess};
 const PROCESS_DUP_HANDLE: u32 = 0x0040;
 const DUPLICATE_CLOSE_SOURCE: u32 = 0x00000001;

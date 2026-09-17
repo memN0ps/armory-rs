@@ -16,12 +16,11 @@
 use alloc::ffi::CString;
 use rustbof::data::DataParser;
 use rustbof::{eprintln, println};
-use windows_sys::Win32::Foundation::{GetLastError, FALSE};
+use windows_sys::Win32::Foundation::{FALSE, GetLastError};
 use windows_sys::Win32::System::Services::{
-    CloseServiceHandle, ControlService, OpenSCManagerA, OpenServiceA,
-    QueryServiceStatusEx, SC_MANAGER_CONNECT, SC_STATUS_PROCESS_INFO,
-    SERVICE_CONTROL_STOP, SERVICE_QUERY_STATUS, SERVICE_STATUS,
-    SERVICE_STATUS_PROCESS, SERVICE_STOP, SERVICE_STOPPED, SERVICE_STOP_PENDING,
+    CloseServiceHandle, ControlService, OpenSCManagerA, OpenServiceA, QueryServiceStatusEx,
+    SC_MANAGER_CONNECT, SC_STATUS_PROCESS_INFO, SERVICE_CONTROL_STOP, SERVICE_QUERY_STATUS,
+    SERVICE_STATUS, SERVICE_STATUS_PROCESS, SERVICE_STOP, SERVICE_STOP_PENDING, SERVICE_STOPPED,
 };
 
 fn stop_service(hostname: *const u8, service_name: &CString) -> u32 {
@@ -77,18 +76,14 @@ fn stop_service(hostname: *const u8, service_name: &CString) -> u32 {
         }
 
         let mut service_status: SERVICE_STATUS = core::mem::zeroed();
-        let result = if ControlService(
-            sc_service,
-            SERVICE_CONTROL_STOP,
-            &mut service_status,
-        ) == FALSE
-        {
-            let err = GetLastError();
-            eprintln!("ControlService failed ({:#X})", err);
-            err
-        } else {
-            0
-        };
+        let result =
+            if ControlService(sc_service, SERVICE_CONTROL_STOP, &mut service_status) == FALSE {
+                let err = GetLastError();
+                eprintln!("ControlService failed ({:#X})", err);
+                err
+            } else {
+                0
+            };
 
         CloseServiceHandle(sc_service);
         CloseServiceHandle(sc_manager);

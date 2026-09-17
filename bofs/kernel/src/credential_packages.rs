@@ -79,7 +79,7 @@ struct WideBytes<'a>(&'a [u8]);
 
 impl fmt::Display for WideBytes<'_> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for bytes in self.0.as_chunks::<2>().0 {
+        for bytes in self.0.chunks_exact(2) {
             let value = u16::from_le_bytes([bytes[0], bytes[1]]);
 
             if value == 0 {

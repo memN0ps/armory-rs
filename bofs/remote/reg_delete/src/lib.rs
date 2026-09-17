@@ -57,7 +57,10 @@ fn main(args: *mut u8, len: usize) {
     let hive = match hive_from_id(hive_id) {
         Some(h) => h,
         None => {
-            eprintln!("Invalid hive ID: {} (use 0=HKCR, 1=HKCU, 2=HKLM, 3=HKU)", hive_id);
+            eprintln!(
+                "Invalid hive ID: {} (use 0=HKCR, 1=HKCU, 2=HKLM, 3=HKU)",
+                hive_id
+            );
             return;
         }
     };
@@ -88,10 +91,7 @@ fn main(args: *mut u8, len: usize) {
         };
 
         if key_name.is_empty() {
-            let ret = RegDeleteKeyA(
-                root_key as HKEY,
-                path_cstr.as_ptr() as *const u8,
-            );
+            let ret = RegDeleteKeyA(root_key as HKEY, path_cstr.as_ptr() as *const u8);
             if ret != 0 {
                 eprintln!(
                     "RegDeleteKeyA failed on {}\\{}: 0x{:X}",
@@ -125,10 +125,7 @@ fn main(args: *mut u8, len: usize) {
             }
 
             let name_cstr = rustbof::str::to_cstr(&key_name);
-            let ret = RegDeleteValueA(
-                hkey as HKEY,
-                name_cstr.as_ptr() as *const u8,
-            );
+            let ret = RegDeleteValueA(hkey as HKEY, name_cstr.as_ptr() as *const u8);
             if ret != 0 {
                 eprintln!(
                     "RegDeleteValueA failed for '{}' on {}\\{}: 0x{:X}",

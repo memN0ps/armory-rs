@@ -720,8 +720,6 @@ impl Drop for Buffer {
 }
 
 fn encode_target(target: &MinifilterTarget, output: &mut [u8]) {
-    let (chunks, _) = output.as_chunks_mut::<524>();
-
     for (field, chunk) in [
         target.filter,
         target.instance,
@@ -729,7 +727,7 @@ fn encode_target(target: &MinifilterTarget, output: &mut [u8]) {
         target.altitude,
     ]
     .iter()
-    .zip(chunks)
+    .zip(output.chunks_exact_mut(524))
     {
         chunk[..2].copy_from_slice(&field.length.to_le_bytes());
 
@@ -749,9 +747,7 @@ fn decode_target(input: &[u8]) -> Option<MinifilterTarget> {
         length: 0,
         value: [0; MAX_FIELD_CHARS],
     }; 4];
-    let (chunks, _) = input.as_chunks::<524>();
-
-    for (field, chunk) in fields.iter_mut().zip(chunks) {
+    for (field, chunk) in fields.iter_mut().zip(input.chunks_exact(524)) {
         field.length = read_u16(chunk, 0)?;
 
         for (index, character) in field.value.iter_mut().enumerate() {
